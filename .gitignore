@@ -1,0 +1,11 @@
+
+Manuscript/manuscript.pdf
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+Manuscript/manuscript.log
+*.out
+Manuscript/manuscript.synctex.gz
+*.thm
