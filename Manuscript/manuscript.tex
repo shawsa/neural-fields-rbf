@@ -276,18 +276,18 @@ This means we can interpret the previous writing as
 \[
   (P_n v)(x) = \sum_{j=1}^{n} v(x_j) \ell_j(x),
 \]
-that is, $v_n$ is the action of $P_n$ on the function $v$, $v_n = P_n v$.
-The same can be said about \cref{eq:RBFInterpolation}, which defines another choice
-of the interpolant, and another choice of projector $P_n$. A fundamental property of
-interpolatory projectors is the following (see \cite[Proposition
-4.1]{Avitabile:2023ab}): \da[]{Cite Atkinson and others} for any
-$r \in \XSet$, 
+that is, $v_n$ is the action of $P_n$ on the function $v$, $v_n = P_n v$. As we shall
+see in the next section, the same can be said about \cref{eq:RBFInterpolation}, which
+defines another choice of the interpolant, and another choice of projector $P_n$. A
+useful property of interpolatory projectors is the following (see
+\cite{atkinson1997,atkinson2005theoretical} and \cite[Proposition
+4.1]{Avitabile:2023ab}): for all $r \in \XSet$
 \begin{equation}\label{eq:projCollProperty}
 P_n r = 0, 
 \qquad \text{if, and only if,} \qquad 
 (P_n r)(x_i) = 0, \qquad i \in \NSet_n.
 \end{equation}
-This property is useful in describing the system in terms of residual, as we shall do
+This property is useful in describing the system in terms of residuals, as we shall do
 in a moment.
 
 We now revisit the neural field equation and the collocation scheme in terms of the
@@ -322,8 +322,7 @@ Secondly, it is possible to interpret \cref{eq:NFColl} in operator form, as
   \end{aligned}
 \end{equation}
 which is a Cauchy problem on the space $\XSet_{n}$. This problem is also well-posed
-and gives a solution $u_n \in C^1(J,\XSet_n)$ and
-\cite[Theorem 3.1]{Avitabile:2023ab}.
+\cite[Theorem 3.1]{Avitabile:2023ab}, and gives a solution $u_n \in C^1(J,\XSet_n)$.
 
 Using \cref{eq:projCollProperty}, we can now pass from \cref{eq:cauchyPn} to an
 equivalent ODE in $\RSet^n$. We define the residual
@@ -364,7 +363,7 @@ identical, to \cref{eq:NFODEQuad}. The former is expressed in terms of
 $K \colon \RSet^n \to \RSet^n$, the latter in terms of
 $\tilde K \colon \RSet^n \to \RSet^n$, which adopts a quadrature rule to approximate
 the integrals in $K$. In the next section, we will give a concrete example of $\tilde
-K$
+K$.
 
 \section{RBF scheme for neural field equations}\label{sec:RBFScheme} 
 \begin{figure}
@@ -377,27 +376,28 @@ K$
 
 We now introduce the interpolant we will use in the paper. To define the interpolant
 we start from the set of $n$ nodes $\Xi = \{ x_i \}_{i \in \NSet_n}$, with the
-associated \textit{Voronoi diagram} $\{ D_i \}_{i \in \NSet_n}$, that is, the
+associated \textit{Voronoi diagram} $\{ D_i \}_{i \in \NSet_n}$, that is,
+the\da[]{Perhaps it's ''a" not "the". I recall Sage commenting on $D$ not being
+uniquely defined if $D$ has a boundary?}
 partition of $D$ into cells
 \[
   D_i = \Bigl\{ x \in D \colon \| x - x_i \| = \min_{j \in \NSet_n} \| x - x_j \| \Bigr\}.
 \]
-Further, we consider a map associating each node $x_i$ to $k_i$ nodes $\{\xi_{ij}
-\}_{j = 1}^{k_i}$ in $\Xi$, the stencil of $x_i$. More formally we define the
-mapping
+Further, we consider a map associating each node $x_i$ to its \textit{stencil}, that
+is, a set of $k_i$ nodes $\{\xi_{ij} \}_{j = 1}^{k_i}$ in $\Xi$. This is formalised
+by a mapping
 \[
   S \colon \Xi \to 2^{\,\Xi}, \qquad x_i \mapsto \{ \xi_{ij} \}_{j = 1}^{k_i},
 \]
-where $2^{\,\Xi}$ is the power set $\Xi$, and denote by $S(x_i)$, or simply $S_i$, the
-stencil of node $i$. We stipulate that $x_i$ is part of its stencil, $x_i \in
-S(x_i)$. Finally, we define a basic radial function $\phi = \Phi( \| \blank \|)
-\colon \RSet^d \to \RSet$, and construct an interpolant of $v$ in the
-following form
+where $2^{\,\Xi}$ is the power set of $\Xi$. We denote by $S(x_i)$, or simply $S_i$,
+the stencil of node $i$, and we stipulate that $S(x_i)$ contains $x_i$. Finally, we
+pick a basic radial function $\phi = \Phi( \| \blank \|) \colon \RSet^d \to \RSet$,
+and seek for an interpolant of $v$ in the following form
 \begin{equation}\label{eq:RBFExpStencil}   
   v_n(x) = \sum_{j = 1}^{n} \sum_{l=1}^{k_j} V_{jl} \Phi(\| x - \xi_{jl} \|) 1_{D_j}(x) 
 \end{equation}
 where $1_A$ denotes the indicator function of the set $A \subset \RSet^d$. In
-\cref{eq:RBFExpStencil}, the interpolant sums over the stencil in each node, and it
+\cref{eq:RBFExpStencil}, the interpolant sums over the stencil in each node, and 
 is therefore expressed in terms of $k_1 + \dots + k_n \geq n$ coefficients $\{
 V_{jl}\}$. Since $v_n$ interpolates $v$ at the nodes $\Xi$, the coefficients
 $V_{jl}$ satisfy the $n$ equations
@@ -405,7 +405,8 @@ $V_{jl}$ satisfy the $n$ equations
   v(x_j) = \sum_{l=1}^{k_j} V_{jl} \Phi(\| x_j - \xi_{jl} \|), \qquad j \in \NSet_n.
 \]
 The system above does not uniquely specify the coefficients $V_{jl}$, and so further
-constraints are added,
+constraints are added. In summary, the $\{ V_{jl} \}$ is obtained by solving the
+following 
 \da[inline]{Complete this after Sage's input}
 
 Crucially, it is possible to pass from the form \cref{eq:RBFExpStencil} of the
@@ -436,19 +437,21 @@ formula we employ is a composite formula over the Voronoi diagram
 in which the integral over a cell $D_i$ is approximated using a single node $x_j$,
 the centre of the cell, and a single weight $\mu_j$. The weights satisfy \ldots
 \da[inline]{Complete. I am unsure there are two approximation symbols above, or just
-one. That depends on how weights are calculated. If possible, we should say something
-about the expected convergence rate of $|Qv - Q_nv|$.} We are now ready to specify a discrete scheme by applying the quadrature rule $Q_n$
-the function $K$ in \cref{eq:NFODE}, recalling that each $D_i$ contains exactly
-one node, namely $x_i$, and obtaining the spatially-discrete scheme
+one. That depends on how weights are calculated, and on the function space of $v$, I
+believe. If possible, we should say something
+about the expected convergence rate of $|Qv - Q_nv|$.} We are now ready to specify a
+discrete scheme by applying the quadrature rule $Q_n$ to each of the elements $K_i$ in
+\cref{eq:NFODE}. Recalling that each $D_i$ contains exactly one node, namely $x_i$,
+we obtain the spatially-discrete scheme
 \[
   \begin{aligned}
-  & \tilde \alpha'(t) = -\tilde \alpha(t) + \gamma(t) 
-    + M f(\tilde \alpha(t)), \qquad t \in J \\
+  & \tilde \alpha'(t) = -\tilde \alpha(t) 
+    + M f(\tilde \alpha(t))+ \gamma(t) , \qquad t \in J \\
   & \tilde \alpha(0) = \nu
   \end{aligned}
 \]
 where $M_{ij} = w(x_i,x_j)\mu_j$, and in which we have used, with a little abuse of
-notation, $f(\alpha)$ to denote the vector with components $(f(\alpha))_i =
+notation, $f(\alpha)$ to denote the vector with components $f_i(\alpha) =
 f(\alpha_i)$. We have therefore provided an RBF example of the collocation scheme
 \cref{eq:NFODEQuad}, in which $\tilde K(\tilde \alpha) = M f(\tilde \alpha)$.
 
