@@ -50,7 +50,7 @@
 Let us consider a neural field model on a ring, with cosine synaptic kernel, 
 \begin{equation}\label{eq:NFRing}
   \begin{aligned}
- & \partial_t u(x,t) =  -u(x,t) + g(x,t)+ \int_{-\pi}^{\pi} \cos(|x-x'|) f(u(x',t)) dx',
+ & \partial_t u(x,t) =  -u(x,t) + g(x,t)+ \int_{-\pi}^{\pi} \cos(|x-y|) f(u(y,t)) dy,
    \qquad x \in [-\pi,\pi) \\
  & u(x,0) = v(x) 
   \end{aligned}
@@ -64,9 +64,9 @@ Because of periodicity, we expect to need only $n$ of those $n+1$ points, and in
 this turns out to be the case. If $v(x)$ is a periodic function, applying the
 trapezium rule with the grid above gives (note the sum runs over just $n$ points)
 \[
-  \int_{-\pi}^{\pi} v(x')\,d x' \approx \sum_{j=1}^{n} v(x_j) h.
+  \int_{-\pi}^{\pi} v(y)\,d y \approx \sum_{j=1}^{n} v(x_j) h.
 \]
-The integrand in \cref{eq:NFRing} is periodic in $x'$, so we evaluate the neural
+The integrand in \cref{eq:NFRing} is periodic in $y$, so we evaluate the neural
 field at $x_1, \ldots, x_n$ ($x_0$ excluded) and simultaneously apply the quadrature rule
 above to obtain
 \[
@@ -76,7 +76,7 @@ above to obtain
   \end{aligned}
 \]
 that is, a system in the form 
-\begin{equation}\label{eq:NFODE}
+\begin{equation}
   \begin{aligned}
    &  U'(t) = - U(t) + M F(U(t)) +  G(t)\\ 
    &  U(0) = V
@@ -105,7 +105,7 @@ The problem above is cast in terms of a generic function $v(x)$, but thinking of
 function $v$ as being the initial condition of the neural field \cref{eq:NF} is
 useful.
 
-In \cite{avitabileProjectionMethodsNeural2023} it is shown that the scheme discussed
+In \cite{Avitabile:2023ab} it is shown that the scheme discussed
 above stems from the following choices: 
 \begin{enumerate}
   \item The points are evenly spaced in $[-\pi,\pi]$.
@@ -117,7 +117,7 @@ above stems from the following choices:
     This choice of $v_n$ is one way to solve the interpolation
     \cref{prob:interpolation}.
 \end{enumerate}
-In \cite{avitabileProjectionMethodsNeural2023} it is also shown that a variety of
+In \cite{Avitabile:2023ab} it is also shown that a variety of
 other schemes, of Finite Elements or Galerkin type, are analysable following a common
 framework.
 
@@ -146,7 +146,7 @@ numerical standpoint, the discussion above brings about the following questions:
         using translates of a kernel function, without a mesh.
       \item Convergence results for RBFs seem available in literature, so there is
         hope to connect to the framework in
-        \cite{avitabileProjectionMethodsNeural2023} and quickly obtain convergence
+        \cite {Avitabile:2023ab} and quickly obtain convergence
         rates.
       \item We will focus on RBF interpolants of the form
         \begin{equation}\label{eq:RBFInterpolation}
@@ -172,6 +172,10 @@ self-contained publication could be centred around the following:
 Possibly in a separate publication, we could look at the problem with diffusion, and
 time adaptivity.
 
+\section{Notation}\label{sec:notation} We will use the index sets by $\NSet_n = \{
+1,\ldots, n\}$. In addition, we will endow $\RSet^n$ with the standard Euclidean
+norm, which we shall denote by $\|\blank\|_2$, or simply $\| \blank \|$.
+
 \section{Heuristic scheme formulation}\label{sec:model} To understand how RBFs enter
 into the discretisation, we show how interpolation determines the collocation scheme,
 that is, how the choice of $v_n$ translates into a collocation scheme. The purpose of
@@ -185,7 +189,7 @@ a compact domain $D \subset \RSet^d$
   &
   \begin{aligned}
     \partial_t u(x,t) =  -u(x,t)  &+ g(x,t) \\
-                & + \int_{D} w(x,x') f(u(x',t))d \mu(x'),
+                & + \int_{D} w(x,y) f(u(y,t))d \mu(y),
   \end{aligned}
   && (x,t) \in D \times [0,T] \\
   & u(x,0) = v(x) && x \in D 
@@ -196,11 +200,11 @@ of a measure $\mu$. Heuristically, a collocation scheme for \cref{eq:NF} can be 
 in steps, as follows:
 
 \textbf{Step 1: nodes selection.} Pick $n$ points in the domain $D$. We denote them by
-$\Xi = \{ x_i \}_{i \in \NSet_n} \subset D$. \da[]{I have used $\NSet_n = \{ 1,\ldots,n
-\}$. I also dislike $\Xi$, we can change it later} In what follows, it may be useful to make $n$ depend on a positive real number
-$h$, a discretisation parameter, so that $n(h) \to \infty$ as $h \to 0$, or as $h \to
-\infty$. An example of such relationship is given in \cref{eq:nodesRing}. We will
-omit the dependence of $n$ on $h$ when possible. 
+$\Xi = \{ x_i \}_{i \in \NSet_n} \subset D$. In what follows, it may be useful to
+make $n$ depend on a positive real number $h$, a discretisation parameter, so that
+$n(h) \to \infty$ as $h \to 0$, or as $h \to \infty$. An example of such relationship
+is given in \cref{eq:nodesRing}. We will omit the dependence of $n$ on $h$ when
+possible. 
 
 \textbf{Step 2: Collocation.} 
 Impose that \cref{eq:NF} holds at each node (\textit{collocate the equation} at
@@ -210,7 +214,7 @@ each $x_i \in \Xi$). This means replacing \cref{eq:NF} by a set of $n$ equations
   &
   \begin{aligned}
     \partial_t u_n(x_i,t) =  -u_n(x_i,t) &+ g(x_i,t) \\
-                & + \int_{D} w(x_i,x') f(u_n(x',t))d \mu(x'),
+                & + \int_{D} w(x_i,y) f(u_n(y,t))d \mu(y),
   \end{aligned}
   && (x_i,t) \in \Xi \times [0,T] \\
   & u_n(x_i,0) = v(x_i) && x_i \in \Xi 
@@ -225,30 +229,29 @@ estimates, but it is clearly not implementable on a computer as is, because inte
 approximated. This takes us to the last step.
   
 \textbf{Step 3: Quadrature.} Select a quadrature for the integral, and solve
-\begin{equation}%\label{eq:NFODE}
+\begin{equation}\label{eq:NFODEQuad}
   \begin{aligned}
-   & \tilde U'(t) = -\tilde U(t) + K(\tilde U(t)) + \tilde G(t) \qquad  t \in [0,T]\\ 
-   & \tilde U(0) = V
+   & \tilde \alpha'(t) = -\tilde \alpha(t) + \tilde K(\tilde \alpha(t)) + \gamma(t) \qquad  t \in [0,T],\\ 
+   & \tilde \alpha (0) = \nu,
   \end{aligned}
 \end{equation}  
-where $\tilde U(t), G(t), K(\tilde U(t)) \in \RSet^n$ for all $t$, and $\tilde U_i(t)$ approximates
-$u_n(x_i,t)$. The nonlinear mapping $K(U)$ involves a matrix-vector multiplication,
-and incorporates quadrature weights.
-
+where $\tilde \alpha(t)$, $\gamma(t), \tilde K(\tilde \alpha(t)), \nu \in \RSet^n$ with
+$\gamma_i(t) = g(x_i,t)$, $\nu_i = v(x_i)$, and where $(\tilde \alpha(t))_i$
+approximates $u_n(x_i,t)$. The nonlinear mapping $K(\tilde \alpha)$ involves a matrix-vector
+multiplication, and incorporates quadrature weights.
 
 \section{Collocation schemes as interpolatory projection schemes}\label{sec:projectionSchemes} 
-\da[inline]{This section can be skipped at a first pass}
 
 Once we have refined the steps of a collocation scheme, we can bring interpolation
-into the picture. In \cite{avitabileProjectionMethodsNeural2023} it is shown that convergence estimates
+into the picture. In \cite{Avitabile:2023ab} it is shown that convergence estimates
 for the collocation scheme (and other schemes) are possible disregarding step 3. In
 fact, with just steps 1-2 can estimate how fast $u_n$ tends to $u$, as $n \to \infty$.
 Once a convergence rate is established, then this instructs which quadrature scheme
-to select: the quadrature should respects this rate, so that we can use $\tilde U_i$ as an
-approximation to $u(x_i,t)$, not simply $u_n(x_i,t)$. 
+to select: the quadrature should respects this rate, so that we can use $(\tilde
+\alpha(t))_i$ as an approximation to $u(x_i,t)$, not simply $u_n(x_i,t)$. 
 
 We do not have to get into the details of
-\cite{avitabileProjectionMethodsNeural2023}, but one aspect is important for these
+\cite{Avitabile:2023ab}, but one aspect is important for these
 notes: it is useful to understand how \cref{eq:NFColl} is derived from \cref{eq:NF}
 using a projection. The RBFs will provide, in fact, a flexible and accurate
 \textit{interpolatory projector}. 
@@ -267,7 +270,7 @@ disguise. In \cref{eq:LagrangeInterp} we wrote
 \[
   v_n(x) = \sum_{j=1}^{n} v(x_j) \ell_j(x). 
 \]
-Now $v$ is a continuous function so $v \in \XSet$, and $v_n$ is a linear combination
+Since $v$ is a continuous function, then so $v \in \XSet$, and $v_n$ is a linear combination
 of $\{ \ell_j \}_{j=1}^n$, so $v_n \in \XSet_n = \spn \{ \ell_1, \ldots, \ell_n \}$.
 This means we can interpret the previous writing as
 \[
@@ -275,38 +278,92 @@ This means we can interpret the previous writing as
 \]
 that is, $v_n$ is the action of $P_n$ on the function $v$, $v_n = P_n v$.
 The same can be said about \cref{eq:RBFInterpolation}, which defines another choice
-of the interpolant. Another choice of projector $P_n$.
+of the interpolant, and another choice of projector $P_n$. A fundamental property of
+interpolatory projectors is the following (see \cite[Proposition
+4.1]{Avitabile:2023ab}): \da[]{Cite Atkinson and others} for any
+$r \in \XSet$, 
+\begin{equation}\label{eq:projCollProperty}
+P_n r = 0, 
+\qquad \text{if, and only if,} \qquad 
+(P_n r)(x_i) = 0, \qquad i \in \NSet_n.
+\end{equation}
+This property is useful in describing the system in terms of residual, as we shall do
+in a moment.
 
-Writing things in terms of $P_n$ is useful, as it compactifies the notation. Firstly,
-it is possible to rewrite the neural field equation \cref{eq:NF} as the following
-Cauchy problem on the Banach space $\XSet$
+We now revisit the neural field equation and the collocation scheme in terms of the
+projector $P_n$. Firstly, we rewrite the neural field equation \cref{eq:NF} in
+operator form, as the following Cauchy problem on the Banach space $\XSet$
 \begin{equation}\label{eq:cauchy}
   \begin{aligned}
-  & \dot U(t) = - U(t) + WF(U(t)sketch.pnsketch.pngg) + G(t) =:  N(U(t),t), \qquad t \in J, \\
+  & U'(t) = - U(t) + WF(U(t)) + G(t) =:  N(t,U(t)), \qquad t \in J, \\
   & U(0) = V.
   \end{aligned}
 \end{equation}
-The identification with \cref{eq:NF} is established with the positions
-\[
+The identification with \cref{eq:NF} is established by setting $J = [0,T]$,
+$V = v(\blank)$, and
+\[  
   \begin{aligned}
-   & V = v(\blank)\\
-   & U \colon [0,T] \to \XSet, && t \mapsto u(\blank,t) \\
-   & G \colon [0,T] \to \XSet, && t \mapsto g(\blank,t) \\
-   & W \colon \XSet \to \XSet, && v \mapsto \int_{D} w(\blank,y) v(y) \,d \mu(x') \\
+   & U \colon J \to \XSet, && t \mapsto u(\blank,t),
+   & G \colon J \to \XSet, && t \mapsto g(\blank,t), \\
+   & W \colon \XSet \to \XSet, && v \mapsto \int_{D} w(\blank,y) v(y) \,d \mu(y),
    & F \colon \XSet \to \XSet, && v \mapsto f(v). 
   \end{aligned}
 \]
-The Cauchy problem is well-posed under general assumptions that is, there is a unique
-$u \in C^1(J,\XSet)$ satisfying \cref{eq:cauchy}.
+Under suitable generic assumptions \da[]{if needed, include them}, the Cauchy problem
+is well-posed under general assumptions that is, there is a unique $u \in
+C^1(J,\XSet)$ satisfying \cref{eq:cauchy}, see
+\cite{Potthast:2009bd,Faugeras:2009gn}, and \cite[Lemma 2.7]{Avitabile:2023ab}.
 
 Secondly, it is possible to interpret \cref{eq:NFColl} in operator form, as
 \begin{equation}\label{eq:cauchyPn}
   \begin{aligned}
-  & \dot U_n(t) = - U_n(t) + P_n WF(U(t)) + P_n G(t) =  P_n N(U_n(t),t), \qquad t \in J, \\
+  & \dot U_n(t) = - U_n(t) + P_n WF(U_n(t)) + P_n G(t) =  P_n N(t,U_n(t)), \qquad t \in J, \\
   & U_n(0) = P_n V,
   \end{aligned}
 \end{equation}
-which is a Cauchy problem on the space $\XSet_{n}$.
+which is a Cauchy problem on the space $\XSet_{n}$. This problem is also well-posed
+and gives a solution $u_n \in C^1(J,\XSet_n)$ and
+\cite[Theorem 3.1]{Avitabile:2023ab}.
+
+Using \cref{eq:projCollProperty}, we can now pass from \cref{eq:cauchyPn} to an
+equivalent ODE in $\RSet^n$. We define the residual
+\[
+  R \colon C^1(J,\XSet) \to C(J,\XSet), \qquad U \mapsto U' - N(\blank, U),
+\]
+rewrite \cref{eq:cauchyPn} as
+\[
+  P_n \bigl( R(U_n)(t) \bigr) = 0, \qquad t \in J, \qquad 
+  P_n \bigl( U_n(0) - V\bigr) = 0, 
+\]
+which, by property \cref{eq:projCollProperty} is equivalent to
+\[
+  \begin{aligned}
+  & U'_n(t)(x_i) = \bigl[P_n N(t,U_n(t))\bigr](x_i), \qquad (i,t) \in \NSet_n \times J, \\
+  & U_n(0)(x_i) = (P_n V)(x_i).
+  \end{aligned}
+\]
+Finally, since $U_n(t) \in \XSet_n$, we can write $U_n(t) = \sum_{j \in \NSet_n}
+\alpha_j(t) \ell_j$ and obtain the sought ODE on $\RSet^n$,
+\begin{equation} \label{eq:NFODE}
+  \begin{aligned}
+   & \alpha'(t) = -\alpha(t) + K(\alpha(t)) + \gamma(t) \qquad  t \in [0,T],\\ 
+   & \alpha (0) = \nu,
+  \end{aligned}
+\end{equation}  
+where 
+\[
+  \begin{aligned}
+  & \alpha_i(t) = U_n(t)(x_i), && \nu_i = v(x_i),  \\
+  & \gamma_i(t) = g(x_i,t),
+  && K_i(\alpha) = 
+    \int_{D}w(x_i,y) f\Bigl( \sum_{j \in \NSet_n} \alpha_j \ell_j(y)\Bigr) \, d\mu(y)
+  \end{aligned}
+\]
+In passing, we note that the system \cref{eq:NFODE} above is related, but not
+identical, to \cref{eq:NFODEQuad}. The former is expressed in terms of 
+$K \colon \RSet^n \to \RSet^n$, the latter in terms of
+$\tilde K \colon \RSet^n \to \RSet^n$, which adopts a quadrature rule to approximate
+the integrals in $K$. 
 
 \section{RBF scheme for neural field equations}\label{sec:RBFScheme} 
 \begin{figure}
@@ -320,8 +377,7 @@ which is a Cauchy problem on the space $\XSet_{n}$.
 See \texttt{docsiamart.pdf} for many examples. I generally adopt the conventions of
 that template. I remark a few things below.
 
-\subsection{References} \label{sec:references}
-These are random citations \cite{KoMa14,siam}. For cross-references I use
+\subsection{References} \label{sec:references} For cross-references I use
 \texttt{cleveref}: like this
 \cref{eq:test}, like this \Cref{eq:test}, or like this \cref{sec:conventions}, or
 this \cref{hyp:trivial}, or this \cref{clm:trivial}.
