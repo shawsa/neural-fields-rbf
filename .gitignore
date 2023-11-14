@@ -1,4 +1,6 @@
 
+__pycache__/
+
 Manuscript/manuscript.pdf
 *.aux
 *.bbl
