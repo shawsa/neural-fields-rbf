@@ -22,8 +22,10 @@ class Stencil:
             self.dim = shape[1]
         self.points = points
 
-        self.upper_bounds = np.max(points, axis=0)
-        self.lower_bounds = np.min(points, axis=0)
+        self.upper_bounds = np.max(points, axis=0, keepdims=True).flatten()
+        self.lower_bounds = np.min(points, axis=0, keepdims=True).flatten()
+        self.mids = (self.upper_bounds + self.lower_bounds) / 2
+        self.scalings = (self.upper_bounds - self.lower_bounds)*2
 
     @property
     @cache
@@ -31,9 +33,7 @@ class Stencil:
         return len(self.points)
 
     def shift_points(self, points: np.ndarray) -> np.ndarray:
-        mids = (self.upper_bounds + self.lower_bounds) / 2
-        widths = self.upper_bounds - self.lower_bounds
-        return (points - mids) / widths
+        return (points - self.mids)/self.scalings
 
     @property
     @cache

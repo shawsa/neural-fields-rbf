@@ -33,7 +33,15 @@ class RBF(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def d2r(r):
+        raise NotImplementedError
+
+    @abstractmethod
     def dr_div_r(r):
+        raise NotImplementedError
+
+    @abstractmethod
+    def __repr__(self):
         raise NotImplementedError
 
 
@@ -50,8 +58,14 @@ class OddPHS(RBF):
     def dr(self, r):
         return self.deg * r ** (self.deg - 1)
 
+    def d2r(self, r):
+        return self.deg * (self.deg-1) * r ** (self.deg - 1)
+
     def dr_div_r(self, r):
         return self.deg * r ** (self.deg - 2)
+
+    def __repr__(self):
+        return f"r^{self.deg}"
 
 
 class EvenPHS(RBF):
@@ -71,6 +85,12 @@ class EvenPHS(RBF):
 
     def dr(self, r):
         raise NotImplementedError
+
+    def d2r(r):
+        raise NotImplementedError
+
+    def __repr__(self):
+        return f"r^{self.deg} log(r)"
 
 
 def PHS(deg: int) -> RBF:

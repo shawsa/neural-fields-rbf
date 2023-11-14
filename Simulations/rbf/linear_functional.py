@@ -1,13 +1,20 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractproperty
+from functools import reduce
 import numpy as np
 import numpy.linalg as la
+from operator import mul
 from .poly_utils import Monomial, poly_basis_dim, poly_powers_gen
 from .rbf import RBF, pairwise_dist, pairwise_diff
 from .stencil import Stencil
 from typing import Callable
 
 
-class LinearOperator(ABC):
+class LinearFunctional(ABC):
+    """
+    A base class for linear functionals.
+    Be sure to account for stencil scaling.
+    """
+
     @abstractmethod
     def rbf_op(self, rbf: RBF, r: float, d: np.ndarray[float]) -> float:
         raise NotImplementedError
@@ -16,16 +23,20 @@ class LinearOperator(ABC):
     def poly_op(self, poly: Monomial, d: np.ndarray[float]) -> float:
         raise NotImplementedError
 
+    @abstractproperty
+    def scale_powers(self) -> np.ndarray[int]:
+        raise NotImplementedError
 
-class OperatorStencil(Stencil):
+
+class FunctionalStencil(Stencil):
     def __init__(
         self,
         points: np.ndarray[float],
     ):
-        super(OperatorStencil, self).__init__(points)
+        super(FunctionalStencil, self).__init__(points)
         self.center = points[0]
 
-    def weights(self, rbf: RBF, op: LinearOperator, poly_deg: int):
+    def weights(self, rbf: RBF, op: LinearFunctional, poly_deg: int):
         d = self.pairwise_diff[0]
         r = self.dist_mat[0]
         mat = self.interpolation_matrix(rbf, poly_deg)
@@ -38,4 +49,5 @@ class OperatorStencil(Stencil):
             ]
         ).T
         weights = la.solve(mat, rhs)
-        return weights[: len(self.points)]
+        scale = reduce(mul, (dx**p for dx, p in zip(self.scalings, op.scale_powers)))
+        return weights[: len(self.points)] / scale

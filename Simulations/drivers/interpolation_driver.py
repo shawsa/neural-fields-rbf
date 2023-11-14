@@ -1,3 +1,9 @@
+"""
+A driver testing 2D interpolation on scattered nodes.
+"""
+
+import set_path
+
 from functools import partial
 import matplotlib
 import matplotlib.pyplot as plt
