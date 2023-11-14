@@ -433,10 +433,11 @@ formula we employ is a composite formula over the Voronoi diagram
       \approx \sum_{j = 1}^n v(x_j) \mu_j =: Q_n v,
   \end{aligned}
 \]
-where the weights $\{ \mu_j \}_{j \in \NSet_n}$ satisfy
+in which the integral over a cell $D_i$ is approximated using a single node $x_j$,
+the centre of the cell, and a single weight $\mu_j$. The weights satisfy \ldots
 \da[inline]{Complete. I am unsure there are two approximation symbols above, or just
-one. If possible, say something about the expected convergence rate of $|Qv - Q_nv|$.} 
-We are now ready to specify a discrete scheme by applying the quadrature rule $Q_n$
+one. That depends on how weights are calculated. If possible, we should say something
+about the expected convergence rate of $|Qv - Q_nv|$.} We are now ready to specify a discrete scheme by applying the quadrature rule $Q_n$
 the function $K$ in \cref{eq:NFODE}, recalling that each $D_i$ contains exactly
 one node, namely $x_i$, and obtaining the spatially-discrete scheme
 \[
