@@ -343,7 +343,7 @@ which, by property \cref{eq:projCollProperty} is equivalent to
   \end{aligned}
 \]
 Finally, since $U_n(t) \in \XSet_n$, we can write $U_n(t) = \sum_{j \in \NSet_n}
-\alpha_j(t) \ell_j$ and obtain the sought ODE on $\RSet^n$,
+\alpha_j(t) \ell_j$ and an ODE on $\RSet^n$,
 \begin{equation} \label{eq:NFODE}
   \begin{aligned}
    & \alpha'(t) = -\alpha(t) + K(\alpha(t)) + \gamma(t) \qquad  t \in [0,T],\\ 
@@ -363,7 +363,8 @@ In passing, we note that the system \cref{eq:NFODE} above is related, but not
 identical, to \cref{eq:NFODEQuad}. The former is expressed in terms of 
 $K \colon \RSet^n \to \RSet^n$, the latter in terms of
 $\tilde K \colon \RSet^n \to \RSet^n$, which adopts a quadrature rule to approximate
-the integrals in $K$. 
+the integrals in $K$. In the next section, we will give a concrete example of $\tilde
+K$
 
 \section{RBF scheme for neural field equations}\label{sec:RBFScheme} 
 \begin{figure}
@@ -371,83 +372,84 @@ the integrals in $K$.
   \includegraphics[width=\textwidth]{sketch}
   \caption{The patch $D_i$ of the spatial domain $D$ contains $k_i =4$}
   \label{fig:sketch}
+  \da[inline]{We need a meaningful sketch here}
 \end{figure}
 
-\section{Conventions} \label{sec:conventions}
-See \texttt{docsiamart.pdf} for many examples. I generally adopt the conventions of
-that template. I remark a few things below.
-
-\subsection{References} \label{sec:references} For cross-references I use
-\texttt{cleveref}: like this
-\cref{eq:test}, like this \Cref{eq:test}, or like this \cref{sec:conventions}, or
-this \cref{hyp:trivial}, or this \cref{clm:trivial}.
-\begin{equation}\label{eq:test}
-  x = y
+We now introduce the interpolant we will use in the paper. To define the interpolant
+we start from the set of $n$ nodes $\Xi = \{ x_i \}_{i \in \NSet_n}$, with the
+associated \textit{Voronoi diagram} $\{ D_i \}_{i \in \NSet_n}$, that is, the
+partition of $D$ into cells
+\[
+  D_i = \Bigl\{ x \in D \colon \| x - x_i \| = \min_{j \in \NSet_n} \| x - x_j \| \Bigr\}.
+\]
+Further, we consider a map associating each node $x_i$ to $k_i$ nodes $\{\xi_{ij}
+\}_{j = 1}^{k_i}$ in $\Xi$, the stencil of $x_i$. More formally we define the
+mapping
+\[
+  S \colon \Xi \to 2^{\,\Xi}, \qquad x_i \mapsto \{ \xi_{ij} \}_{j = 1}^{k_i},
+\]
+where $2^{\,\Xi}$ is the power set $\Xi$, and denote by $S(x_i)$, or simply $S_i$, the
+stencil of node $i$. We stipulate that $x_i$ is part of its stencil, $x_i \in
+S(x_i)$. Finally, we define a basic radial function $\phi = \Phi( \| \blank \|)
+\colon \RSet^d \to \RSet$, and construct an interpolant of $v$ in the
+following form
+\begin{equation}\label{eq:RBFExpStencil}   
+  v_n(x) = \sum_{j = 1}^{n} \sum_{l=1}^{k_j} V_{jl} \Phi(\| x - \xi_{jl} \|) 1_{D_j}(x) 
 \end{equation}
-
-\subsection{Todos}
-You can find templates of other author's todos in
-\texttt{damacros.sty}, which you are welcome to edit.
-This is how I make a short comment\da{Short comment by Daniele}. Comments can also go
-inline like the one below.
-\da[inline]{Long comments by Daniele} 
-% \missingfigure
-% 
-% \section*{Acknowledgments}
-
-\section{Testing commands}
-
-\subsection{Testing maths operators}
-Here are tests for operators
+where $1_A$ denotes the indicator function of the set $A \subset \RSet^d$. In
+\cref{eq:RBFExpStencil}, the interpolant sums over the stencil in each node, and it
+is therefore expressed in terms of $k_1 + \dots + k_n \geq n$ coefficients $\{
+V_{jl}\}$. Since $v_n$ interpolates $v$ at the nodes $\Xi$, the coefficients
+$V_{jl}$ satisfy the $n$ equations
 \[
-  \spec, \quad 
-  \range, \quad 
-  \spn, \quad
-  \diag, \quad
-  \meas, \quad
-  \id, \quad
-  \real z, \quad
-  \imag z, \quad
-  \e, \quad
-  \iunit, \quad
+  v(x_j) = \sum_{l=1}^{k_j} V_{jl} \Phi(\| x_j - \xi_{jl} \|), \qquad j \in \NSet_n.
 \]
+The system above does not uniquely specify the coefficients $V_{jl}$, and so further
+constraints are added,
+\da[inline]{Complete this after Sage's input}
 
-\subsection{Testing additional theorem-like environments} The following additional
-theorem-like environments may be useful.
-
-\begin{hypothesis} \label{hyp:trivial}
-  This is a hypothesis
-\end{hypothesis}
-
-\begin{claim} \label{clm:trivial}
-  This is a claim
-\end{claim}
-
-\subsection{Testing sets}
-This are a few examples of sets (see more commands in \texttt{damacros.sty})
+Crucially, it is possible to pass from the form \cref{eq:RBFExpStencil} of the
+interpolant, to the so-called \textit{cardinal form} of the interpolant, that, is a
+Lagrange interpolant
 \[
-  \RSet, \quad
-  \CSet, \quad
-  \ZSet, \quad
-  \sph, \quad
-  \ldots
+  v_n(x) = \sum_{j=1}^{n} v(x_j) \ell_j(x),
 \]
+using the transformation
+\da[inline]{Complete after Sage's input}
 
-\subsection{Empty arguments}
-Command for empty arguments, which require spacing
+Henceforth, we will use the cardinal form for the analysis and the presentation of
+our scheme, while we resort to the stencil-based form to carry out concrete
+calculations. The cardinal form of the interpolant defines a projector $P_n \colon \XSet \to
+\XSet_n = \spn \{ \ell_1, \ldots, \ell_n \}$, and therefore fits into the framework
+presented in the past section.
+
+To complete the scheme, we now require a quadrature formula for the integrand. The
+formula we employ is a composite formula over the Voronoi diagram
 \[
-  u(\blank,t) \quad t \in \RSet
+  \begin{aligned}
+  Q v := \int_{D} v(y)\,d \mu(y) 
+    & = \sum_{j=1}^n \int_{D_j} v(y) \,d \mu(y) \\
+    & \approx \sum_{j = 1}^n \int_{D_j} v_n(y) \,d \mu(y)
+      \approx \sum_{j = 1}^n v(x_j) \mu_j =: Q_n v,
+  \end{aligned}
 \]
-
-\subsection{Calligraphic fonts}
-If one really must use calligraphic fonts, there are macros for this.
+where the weights $\{ \mu_j \}_{j \in \NSet_n}$ satisfy
+\da[inline]{Complete. I am unsure there are two approximation symbols above, or just
+one. If possible, say something about the expected convergence rate of $|Qv - Q_nv|$.} 
+We are now ready to specify a discrete scheme by applying the quadrature rule $Q_n$
+the function $K$ in \cref{eq:NFODE}, recalling that each $D_i$ contains exactly
+one node, namely $x_i$, and obtaining the spatially-discrete scheme
 \[
-  \calA, \quad
-  \calL, \quad
-  \calM, \quad
-  \calS, \quad
+  \begin{aligned}
+  & \tilde \alpha'(t) = -\tilde \alpha(t) + \gamma(t) 
+    + M f(\tilde \alpha(t)), \qquad t \in J \\
+  & \tilde \alpha(0) = \nu
+  \end{aligned}
 \]
-
+where $M_{ij} = w(x_i,x_j)\mu_j$, and in which we have used, with a little abuse of
+notation, $f(\alpha)$ to denote the vector with components $(f(\alpha))_i =
+f(\alpha_i)$. We have therefore provided an RBF example of the collocation scheme
+\cref{eq:NFODEQuad}, in which $\tilde K(\tilde \alpha) = M f(\tilde \alpha)$.
 
 \bibliographystyle{siamplain}
 \bibliography{references}
