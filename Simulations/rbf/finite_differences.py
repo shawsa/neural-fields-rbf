@@ -1,4 +1,3 @@
-
 from .rbf import RBF, PHS
 from .poly_utils import Monomial
 from .linear_functional import LinearFunctional
@@ -14,21 +13,25 @@ class Derivative1D(LinearFunctional):
         return poly.diff(d, 1)
 
     @property
-    def scale_powers(self) -> np.ndarray[int]:
-        return np.array([1])
+    def scale_power(self) -> np.ndarray[int]:
+        return 1
 
 
 class Laplacian(LinearFunctional):
+    """Not working in higher than 1D yet."""
 
     def __init__(self, dim: int):
         self.dim = dim
 
     def rbf_op(self, rbf: RBF, r: float, d: np.ndarray[float]) -> float:
-        return rbf.d2r(r) + (self.dim-1)*rbf.dr_div_r(r)
+        return rbf.d2r(r) + (self.dim - 1) * rbf.dr_div_r(r)
 
     def poly_op(self, poly: Monomial, d: np.ndarray[float]) -> float:
-        return poly.diff(d, *[2 for _ in range(self.dim)])
+        return sum(
+            poly.diff(d, *[2 * (i == j) for i in range(self.dim)])
+            for j in range(self.dim)
+        )
 
     @property
-    def scale_powers(self) -> np.ndarray[int]:
-        return np.array([2 for _ in range(self.dim)])
+    def scale_power(self) -> np.ndarray[int]:
+        return 2

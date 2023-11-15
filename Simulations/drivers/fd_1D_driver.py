@@ -22,7 +22,6 @@ k = 5
 hs = [2 ** (-i) for i in range(20)]
 assert k % 2 == 1
 
-print("Function: sin(x)")
 print(f"1st derivative evaluated at 0: {d_foo(0)}")
 print("Stencil:")
 unshifted_points = np.concatenate([np.arange(-k // 2 + 1, 0), np.arange((k + 1) // 2)])

@@ -49,6 +49,9 @@ class Monomial:
             return ret.flatten()
         return ret
 
+    def __repr__(self):
+        return f"Monmial{self.pows}"
+
 
 PolyPowGen = Generator[Monomial, None, None]
 

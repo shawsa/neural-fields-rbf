@@ -24,7 +24,7 @@ class LinearFunctional(ABC):
         raise NotImplementedError
 
     @abstractproperty
-    def scale_powers(self) -> np.ndarray[int]:
+    def scale_power(self) -> int:
         raise NotImplementedError
 
 
@@ -44,10 +44,9 @@ class FunctionalStencil(Stencil):
         rhs[: len(self.points)] = op.rbf_op(rbf, r, d).ravel()
         rhs[len(self.points) :] = np.array(
             [
-                op.poly_op(poly, np.array([0.0]))
+                op.poly_op(poly, np.zeros(self.dim))
                 for poly in poly_powers_gen(self.dim, poly_deg)
             ]
-        ).T
+        )
         weights = la.solve(mat, rhs)
-        scale = reduce(mul, (dx**p for dx, p in zip(self.scalings, op.scale_powers)))
-        return weights[: len(self.points)] / scale
+        return weights[: len(self.points)] / (self.scaling**op.scale_power)

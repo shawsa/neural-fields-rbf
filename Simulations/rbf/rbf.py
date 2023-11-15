@@ -59,7 +59,7 @@ class OddPHS(RBF):
         return self.deg * r ** (self.deg - 1)
 
     def d2r(self, r):
-        return self.deg * (self.deg-1) * r ** (self.deg - 1)
+        return self.deg * (self.deg-1) * r ** (self.deg - 2)
 
     def dr_div_r(self, r):
         return self.deg * r ** (self.deg - 2)
