@@ -1,0 +1,275 @@
+<html>
+
+<head>
+	<title>RBF-QF Notes</title>
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+        });
+    </script>
+    <script type="text/javascript" async
+        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-MML-AM_CHTML">
+    </script>
+    <!-- Mathjax commands -->
+    $
+    \newcommand{\DD}{\mathcal{D}}
+    \newcommand{\RR}{\mathbb{R}}
+    \newcommand{\NN}{\mathbb{N}}
+    \newcommand{\OO}{\mathcal{O}}
+    \newcommand{\mathcow}{\OO}
+    \newcommand{\QQ}{\mathbb{Q}}
+    \newcommand{\ZZ}{\mathbb{Z}}
+    \newcommand{\CC}{\mathbb{C}}
+    \newcommand{\KK}{\mathbb{K}}
+    \newcommand{\PP}{\mathcal{P}}
+    \newcommand{\TT}{\mathcal{T}}
+    \newcommand{\XX}{\mathbb{X}}
+    \newcommand{\BB}{\mathcal{B}}
+    \newcommand{\LL}{\mathcal{L}}
+    \renewcommand{\Re}{\operatorname{Re}}
+    \renewcommand{\Im}{\operatorname{Im}}
+
+    \newcommand{\veca}{\vec{a}}
+    \newcommand{\vecb}{\vec{b}}
+    \newcommand{\vecc}{\vec{c}}
+    \newcommand{\vecd}{\vec{d}}
+    \newcommand{\vece}{\vec{e}}
+    \newcommand{\vecf}{\vec{f}}
+    \newcommand{\vecn}{\vec{n}}
+    \newcommand{\vecp}{\vec{p}}
+    \newcommand{\vecr}{\vec{r}}
+    \newcommand{\vecu}{\vec{u}}
+    \newcommand{\vecv}{\vec{v}}
+    \newcommand{\vecw}{\vec{w}}
+    \newcommand{\vecx}{\vec{x}}
+    \newcommand{\vecy}{\vec{y}}
+    \newcommand{\vecz}{\vec{z}}
+
+	\renewcommand{\vec}[1]{\boldsymbol{\mathbf{#1}}}
+
+	\newcommand{\norm}[1]{\lVert #1 \rVert}
+    $
+</head>
+<body>
+
+	<h1>RBF Interpolation</h1>
+	<p>
+	Let $\XX = C(D)$ with $D \subset \RR^d$ and let $\Xi_n = \{x_i\}_{i=1}^n \subseteq D$ be a set of collocation nodes.
+	Local RBF interpolation can be understood as partitioning $D$ into elements and approximating a function in $\XX$ by a function defined piecewise on each element.
+	Each of these pieces interpolates a subset of $\Xi_n$ called a stencil.
+	In practice, we ensure that any collocation nodes that fall within an element are included in the associated stencil, and thus our approximation is a piecewise interpolant. 
+	</p>
+	<p>
+	To this end, let $\DD = \{D_j\}_{j = 1}^m$ be a partition of $D$ and let $S: \DD \to \PP(\Xi_n)$ be a mapping from elements to the associated stencils. 
+	</p>
+	<p>
+	We will approximate a function $v \in \XX$ by a piecewise RBF+polynomial interpolant $v_n \in \XX$.
+	We use this notation for consision, however $v_n$ depends not only on the number of nodes $n$,
+	but also their locations $\Xi_n$,
+	the partition $\DD$,
+	and a choice of polynomial basis $Y = \{p_j\} \subset \mathcal{P}_{\text{deg}}$.
+	More precisely, 
+	$$
+	v_n(x) = \sum_{E \in \DD}
+	\bigg(
+		\sum_{\xi \in S(E)} a_{\xi, E} \Phi(\norm{x - \xi}) +
+		\sum_{p \in Y} b_p p(x)
+	\bigg) I_E(x)
+	$$
+	where
+	$$
+	I_E(x) = \begin{cases}
+		1, & \text{ if } x \in E \\
+		0 & \text{ else}.
+	\end{cases}
+	$$
+	is an indicator function.
+	Alternatively, we can forgo the outer summation and specify $v_n$ piecewise: for $x \in E$
+	$$v_n(x) = 
+		\sum_{\xi \in S(E)} a_{\xi, E} \Phi(\norm{x - \xi}) +
+		\sum_{p \in Y} b_{p, E} p(x).
+	$$
+	</p>
+	<p>
+	The first form is uncommon in the RBF literature, but more clearly emphasises the space of interpolants
+	which we see has dimension $\sum_{E \in \DD} \big(|S(E)| + |Y| \big)$. 
+	</p>
+	<p>
+	On each element $E$, we determine the coefficients $a_{\xi, E}$ and $b_{p, E}$ by enforcing constraints that we separate into two categories: interpolation constraints and moment conditions. The interpolation constraints are given by
+	$$
+	v(\zeta) = 
+		\sum_{\xi \in S(E)} a_{\xi, E} \Phi(\norm{\zeta - \xi}) +
+		\sum_{p \in Y} b_{p, E} p(\zeta), \text{ for } \zeta \in S(E).
+	$$
+	Note the absence of the indicator function. 
+	The radial and polynomial basis functions used in the interpolation conditions are different than the basis functions that comprise $v_n$ because they are not restricted to one element.
+	This <em>local interpolant</em> interpolates all of the collocation nodes in the stencil associated with this element and thus provides $|S(E)|$ constraints to our coefficients. 
+	To be clear, we refer to these as interpolation constraints because the local interpolant satisfies them. 
+	In contrast, the piecewise interpolant $v_n$ only satisfies the constraints for stencil nodes that happen to be in the element $E$. 
+	For stencil points outside of $E$, these constraints limit the interpolation space but they do not enforce that $v_n$ interpolates any function values.
+	</p>
+	<p>
+	The moment conditions (more precisely the <em>discrete moment conditions</em>) are given by
+	$$
+	0 = \sum_{\xi \in S(E)} a_{\xi, E} p(\xi), \text{ for } p \in Y.
+	$$
+	I don't think I fully understand them but they have several important consequences I wish to highlight. 
+	First, consider the case where the function $v$ is a polynomial in the span of $Y$. 
+	Then the polynomial basis terms alone are sufficient to interpolate $v$ and we would hope that the coefficients on the radial basis functions are zero. 
+	I believe the moment conditions ultimately enforce this though it is not obvious how.
+	Speaking more heuristically, polynomial basis terms help provide accuracy
+	and radial basis terms help provide interpolation stability.
+	Second, these conditions guarantee a unique interpolant as the solution to the following system (one system per element/stencil)
+	$$
+	\underbrace{
+	\begin{bmatrix}
+		A & P \\
+		P^T & 0
+	\end{bmatrix}
+	}_{M}
+	\underbrace{
+	\begin{bmatrix}
+		\vec{a}_{E} \\
+		\vec{b}_{E}
+	\end{bmatrix}
+	}_{\vecc}
+	=
+	\underbrace{
+	\begin{bmatrix}
+		\vecv_E \\
+		\vec{0}
+	\end{bmatrix}
+	}_\vecv.
+	$$
+	Here, $A$ is a symmetric square matrix with shape $|S(E)| \times |S(E)|$ and entries given by $A_{ij} = \Phi(\norm{\xi_i - \xi_j})$ where $\{\xi_k\}_{k=1}^{|S(E)|} = S(E)$ enumerates the stencil.
+	For historical reasons, we will refer to $A$ as the RBF interpolation matrix, and will refer to the block matrix as the full interpolation matrix.
+	The matrix $P$ has shape $|S(E)| \times |Y|$ and has entries given by $P_{ij} = p_j(\xi_i)$ where $\{\xi_k\}=S$ enumerates the stencil and $\{p_j\} = Y$ enumerates the polynomial basis functions. 
+	The vectors $\veca_{E}$, $\vecb_E$ are vectors of the coefficients common to the element $E$ and the vector $\vecv_E$ is defined by
+	$[\vecv_E]_i = v(\xi_i)$ for $\xi_i \in S(E)$.
+	</p>
+	<p>
+	We use $M, \vecv, \vecc$ to avoid clutter, however, they are still element dependent.
+	This system uniquely determines the coefficients $\vecc$ associated with this element. 
+	In combination, the systems associated with all elements in the domain uniquely determine the interpolant $v_n$.
+	</p>
+
+	<h3>Important Parameter Selection</h3>
+	<p>
+	In the above formulation the piecewise interpolant has many parameters, some of which depend on or are determined by others. In particular, the choice of domain partition $\DD$ is often left unsaid in RBF literature. If the end goal is to evaluate the resulting piecewise interpolant then it is common to use a Voronoi partition. That is, each element $A_i \in \DD$ is the set of points in the domain $D$ that are closer to the collocation point $x_i \in \Xi_n$ than to other collocation points:
+	$$
+	A_i = \{x \in D | i = \text{argmin}_{i} \norm{x - \xi_i} \}.
+	$$
+	In this case, each element will contain exactly one collocation node.
+	The associated stencils should include this node, and are usually taken to be some number of nearest neighbors in $\Xi_n$.
+	The primary advantage of the Voronoi partition is that it is simple (nearest neighbors are easy to find, for example with a KDTree) and that the local interpolants are only evaluated near their center, thus mitigating potential Runge phenomenon.
+	</p>
+
+	<h1>Linear Functional Approximation</h1>
+	<p>
+	Any interpolation method can be used to approximate a linear functional by applying the functional to the basis functions. For example, if the interpolation method is polynomial interpolation over a small number of points and the linear functional is evaluation of a derivative then we arrive at the classic finite difference formulae. For another example, if our interpolation method is piecewise linear interpolation with equally spaced knots and our functional is integration then we arrive at the composite trapezoidal rule. 
+	We next formalize this for RBF+polynomial interpolation.
+	</p>
+	<p>
+	Let $\LL: \XX \to \RR$ be a linear functional. For a function $v \in \XX$ and an RBF interpolation scheme (parameterized by $\Xi_n$, $\DD$, etc.) we hope that $\LL v \approx \LL v_n$. This is often a reasonable expectation if the interpolant is a good approximation to the function in an appropriate sense. For example, if a polynomial interpolant is close to the function in a Sobolov sense then the higher order derivatives of the function must be small and lower order derivatives of the polynomial will be similar to those of the function.
+	</p>
+	<p>
+	We proceed
+	\begin{align*}
+		\LL v 
+			& \approx \LL v_n \\
+			&= \sum_{E \in \DD} \bigg(
+					\sum_{\xi \in S(E)} a_{\xi, E} \LL \big[ \Phi(\norm{x - \xi}) I_E(x) \big] +
+					\sum_{p \in Y} b_p \LL \big[ p(x) I_E(x) \big]
+				\bigg).
+	\end{align*}
+	<p>
+	</p>
+	We can avoid computing the interpolant coefficients $\veca, \vecb$ directly by relating them to the function values at stencil points.
+	To do so, we express the pair of inner summations as a dot product and then substitute using our interpolation system above
+	\begin{align*}
+		\LL v 
+			& \approx \LL v_n \\
+			&= \sum_{E \in \DD} \bigg(
+					\sum_{\xi \in S(E)} a_{\xi, E} \LL \big[ \Phi(\norm{x - \xi}) I_E(x) \big] +
+					\sum_{p \in Y} b_p \LL \big[ p(x) I_E(x) \big]
+				\bigg) \\
+			&= \sum_{E \in \DD} \begin{bmatrix} \LL \Phi_E & \LL P_E \end{bmatrix}^T \vecc \\
+			&= \sum_{E \in \DD} \begin{bmatrix} \LL \Phi_E & \LL P_E \end{bmatrix}^T M^{-1} \vecv \\
+			&= \sum_{E \in \DD} \underbrace{\begin{bmatrix} \LL \Phi_E & \LL P_E \end{bmatrix}^T M^{-1}}_{\vecw^T} \vecv \\
+			&= \sum_{E \in \DD} {\vecw_E^T} \vecv_E.
+	\end{align*}
+	In this last step we are taking advantage of the fact that the lower block of the vector $\vecv$ is the zero vector, and so we may truncate $\vecw \in \RR^{|S(E)|+|Y|}$ to $\vecw_E \in \RR^{|S(E)|}$, which matches the size of the stencil.
+	</p>
+	<p>
+	This sum of dot products can be viewed as a double sum.
+	The arguments to the sum are a product of weights and function values at collocation nodes.
+	Since each collocation node appears in multiple stencils, there will be multiple weights associated with each collocation node, but there will only be one function value associated.
+	We can reorder the sum and combine weights associated with common collocation points.
+	To notate this, it will be useful to define a new function mapping collocation nodes to sets of elements whose associated stencils contain that point.
+	That is, define $\hat{S}: \Xi_n \to \PP(\DD)$ by
+	$$
+	\hat{S}(\xi) = \{ E \in \DD \mid \xi \in S(E) \}.
+	$$
+	Now we may write
+	\begin{align*}
+	\LL v 
+		& \approx \sum_{E \in \DD} \sum_{\xi \in S(E)} w_{\xi, E} v(\xi) \\
+		&= \sum_{\xi \in \Xi_n} \left( \sum_{E \in \hat{S}(E)} (\vecw_E)_\xi \right) v(\xi) \\
+		&= \sum_{\xi \in \Xi_n} \mu_\xi v(\xi)
+	\end{align*}
+	where $(\vecw_E)_\xi$ denotes the weight in the vector $\vecw_E$ associated with the point $\xi$.
+	</p>
+	<p>
+	This is now in the form that we expect to see: a weighted sum of function values at the collocation nodes.
+	If $\LL$ is a differential operator then the weights $\vec{\mu}$ are finite difference weights.
+	If $\LL$ is an integral operator then the weights are quadrature weights.
+	We may find these weights by solving
+	$$
+	\begin{bmatrix}
+		A & P \\
+		P^T & 0
+	\end{bmatrix}
+	\begin{bmatrix}
+		\vecw_E \\
+		\vec{\gamma} 
+	\end{bmatrix}
+	=
+	\begin{bmatrix}
+		\LL \vec{\Phi_E} I_E \\
+		\LL \vec{P_E} I_E
+	\end{bmatrix}
+	$$
+	for each element $E$, then disregarding $\vec{\gamma}$, and using $\vecw_E$ in the sum above.
+	</p>
+	<h2>Notes for specific functionals</h2>
+	<h3>Finite Differences</h3>
+	<p>
+	When using RBF interpolants to find finite difference weights (RBF-FD) this is simplified considerably.
+	Often we wish to approximate a differential operator with a finite difference matrix where each row of the matrix contains finite difference weights that approximate derivative values at a different location.
+	To construct such a matrix we repeat the process above for each point at which we would like to approximate the derivative (usually at the collocation nodes). 
+	The location at which we approximate the derivative will be contained in only one element, we will call $E^*$.
+	Therefore, when we evaluate $\LL \Phi I_E$ for basis functions associated with other elements $E \ne E^{*}$,  it will be zero and the weights will also be zero.
+	The sum above can then be simplified
+	\begin{align*}
+		\LL v
+			&= \sum_{E \in \DD} \vecw_E^T \vecv_E \\
+			&= \vecw_{E^*}^T \vecv_{E^*}
+	\end{align*}
+	and we see that we need only compute the weights for one stencil per derivative evaluation location (collocation node).
+	</p>
+	<p>
+	In the RBF-FD literature there is no mention of elements or this partition $\DD$.
+	Each location at which we approximate a derivative (collocation node) is directly associated with a stencil.
+	This is natural for finite differences.
+	In practice, such partitions $\DD$ would undoubtedly be meshes, and the ability to forgo a mesh is one of the primary advantages of the RBF-FD method.
+	</p>
+
+	<h3>Quadrature</h3>
+	<p>
+	When using RBF interpolants to find quadrature formulae (RBF-QF) it is not so easy to avoid the partition $\DD$ (in practice, a mesh).
+	</p>
+</body>
+
+
+
+
