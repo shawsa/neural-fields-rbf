@@ -66,12 +66,11 @@ class LocalInterpolator:
         self.rbf = rbf
         self.poly_deg = poly_deg
         self.stencil_size = stencil_size
-
-        self.kdt = KDTree(points)
         self.generate_stencils()
         self.interpolate_on_stencils()
 
     def generate_stencils(self):
+        self.kdt = KDTree(self.points)
         self.stencils = []
         for point in self.points:
             _, neighbor_indices = self.kdt.query(point, self.stencil_size)
@@ -91,6 +90,22 @@ class LocalInterpolator:
 
     def __call__(self, eval_point: np.ndarray) -> float:
         _, index = self.kdt.query(eval_point, 1)
+        return self.local_interpolants[index](eval_point)
+
+
+class LocalInterpolator1D(LocalInterpolator):
+    def generate_stencils(self):
+        """In 1D, we cannot use a KD-tree, but finding neighbors is simple."""
+        self.stencils = []
+        for point in self.points:
+            lst = [(index, abs(x - point)) for index, x in enumerate(self.points)]
+            lst.sort(key=lambda tup: tup[1])
+            self.stencils.append(
+                np.array([tup[0] for tup in lst[: self.stencil_size]], dtype=int)
+            )
+
+    def __call__(self, eval_point: float) -> float:
+        index = np.argmin(np.abs(eval_point - self.points))
         return self.local_interpolants[index](eval_point)
 
 

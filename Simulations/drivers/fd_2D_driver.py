@@ -12,17 +12,18 @@ import sympy as sym
 
 x_sym, y_sym = sym.symbols("x y")
 
-sym_foo = sym.cos(x_sym-1)*sym.cos(y_sym-3)
+# sym_foo = sym.sin(x_sym-1)*sym.cos(y_sym-3)
+sym_foo = (x_sym-1)**4 + (x_sym+1)**2*(y_sym-4) - 4*y_sym**3
 
 
 foo = sym.lambdify((x_sym, y_sym), sym_foo)
 L_foo = sym.lambdify((x_sym, y_sym), sym_foo.diff(x_sym, 2) + sym_foo.diff(y_sym, 2))
 
 
-rbf = PHS(3)
-poly_deg = 2
+rbf = PHS(5)
+poly_deg = 3
 
-stencil_width = 3
+stencil_width = 7
 
 
 hs = [2**-i for i in range(2, 20)]
