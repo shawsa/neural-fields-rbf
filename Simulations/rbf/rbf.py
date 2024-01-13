@@ -59,13 +59,13 @@ class OddPHS(RBF):
         return self.deg * r ** (self.deg - 1)
 
     def d2r(self, r):
-        return self.deg * (self.deg-1) * r ** (self.deg - 2)
+        return self.deg * (self.deg - 1) * r ** (self.deg - 2)
 
     def dr_div_r(self, r):
         return self.deg * r ** (self.deg - 2)
 
     def __repr__(self):
-        return f"r^{self.deg}"
+        return f"r**{self.deg}"
 
 
 class EvenPHS(RBF):
@@ -80,7 +80,7 @@ class EvenPHS(RBF):
         ret = np.empty(r.shape)
         mask = ret == 0
         ret[mask] = 0
-        ret[~mask] = r[~mask]**self.deg * np.log(r[~mask])
+        ret[~mask] = r[~mask] ** self.deg * np.log(r[~mask])
         return ret
 
     def dr(self, r):
@@ -90,7 +90,7 @@ class EvenPHS(RBF):
         raise NotImplementedError
 
     def __repr__(self):
-        return f"r^{self.deg} log(r)"
+        return f"r**{self.deg} * log(r)"
 
 
 def PHS(deg: int) -> RBF:
