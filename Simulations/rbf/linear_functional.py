@@ -15,6 +15,8 @@ class LinearFunctional(ABC):
     Be sure to account for stencil scaling.
     """
 
+    # this call signature may need to change
+    # currenty, this is ideal for differential functionals
     @abstractmethod
     def rbf_op(self, rbf: RBF, r: float, d: np.ndarray[float]) -> float:
         raise NotImplementedError

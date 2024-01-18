@@ -7,6 +7,7 @@ RBF matrices based on polyharmonic spline RBFs.
 """
 
 from functools import cache, reduce
+from itertools import product
 from math import comb, perm
 import numpy as np
 import operator
@@ -43,7 +44,7 @@ class Monomial:
             coeff *= perm(p, o)
         ret = coeff * reduce(
             operator.mul,
-            (x**max(p, 0) for x, p in zip(points.T, new_pows)),
+            (x ** max(p, 0) for x, p in zip(points.T, new_pows)),
         )
         if len(self.pows) == 1:
             return ret.flatten()
