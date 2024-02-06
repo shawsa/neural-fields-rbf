@@ -9,10 +9,18 @@ def test_dict():
         assert isinstance(func(1.0, 2.0), float)
 
 
+def validate(func):
+    def right_triangle_integrate(a, b):
+        if abs(a) < 1e-10:
+            return 0
+        return func(a, b)
+    return right_triangle_integrate
+
+
 def get_right_triangle_integral_function(rbf: RBF):
     expr_str = str(rbf)
     if expr_str in right_triangle_integrate_dict.keys():
-        return right_triangle_integrate_dict[expr_str]
+        return validate(right_triangle_integrate_dict[expr_str])
     raise ValueError(f"Error: rbf {expr_str} not implemented in quadrature library")
 
 

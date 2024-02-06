@@ -18,9 +18,7 @@ class Monomial:
         self.pows = pows
 
     def __call__(self, points: np.ndarray[float]):
-        """
-        Apply the polynomial powers to an array of points, pointwise.
-        """
+        """Apply the polynomial powers to an array of points, pointwise."""
         shape = points.shape
         if len(self.pows) == 1:
             points = points.reshape(*shape, 1)
@@ -43,11 +41,18 @@ class Monomial:
             coeff *= perm(p, o)
         ret = coeff * reduce(
             operator.mul,
-            (x**max(p, 0) for x, p in zip(points.T, new_pows)),
+            (x ** max(p, 0) for x, p in zip(points.T, new_pows)),
         )
         if len(self.pows) == 1:
             return ret.flatten()
         return ret
+
+    def adiff_x(self):
+        pows = list(self.pows)
+        pows[0] += 1
+        monomial = Monomial(*pows)
+        factor = 1/pows[0]
+        return np.vectorize(lambda *args: factor * monomial(np.array(args)))
 
     def __repr__(self):
         return f"Monmial{self.pows}"
@@ -58,18 +63,14 @@ PolyPowGen = Generator[Monomial, None, None]
 
 @cache
 def poly_basis_dim(dim: int, deg: int) -> int:
-    """
-    The number of polynomial basis terms up to a given degree for a given
-    dimension.
-    """
+    """The number of polynomial basis terms up to a given degree for a given
+    dimension."""
     return comb(dim + deg, deg)
 
 
 def poly_powers_of_deg(dim: int, deg: int) -> PolyPowGen:
-    """
-    Find all combinations of exponents of polynomials of the specified degree for
-    the specified dimension. Return a generator that yields tuples of the exponents.
-    """
+    """Find all combinations of exponents of polynomials of the specified degree for the
+    specified dimension. Return a generator that yields tuples of the exponents."""
     if dim == 1:
         yield Monomial(deg)
     else:
@@ -80,18 +81,15 @@ def poly_powers_of_deg(dim: int, deg: int) -> PolyPowGen:
 
 
 def poly_powers_gen(dim: int, max_deg: int) -> PolyPowGen:
-    """
-    Find all combinations of exponents of polynomials of at most the specified degree
-    for the specified dimension. Return a generator that yields tuples of the exponents.
-    """
+    """Find all combinations of exponents of polynomials of at most the specified degree
+    for the specified dimension. Return a generator that yields tuples of the
+    exponents."""
     for deg in range(max_deg + 1):
         yield from poly_powers_of_deg(dim, deg)
 
 
 @cache
 def poly_powers(dim: int, max_deg: int) -> tuple[Monomial]:
-    """
-    Cached version of poly_powers_gen that returns tuple.
-    More efficient for repeated calls with same inputs.
-    """
+    """Cached version of poly_powers_gen that returns tuple. More efficient for
+    repeated calls with same inputs."""
     return tuple(poly_powers_gen(dim, max_deg))

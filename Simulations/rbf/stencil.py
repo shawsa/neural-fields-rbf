@@ -13,6 +13,7 @@ class Stencil:
     def __init__(
         self,
         points: np.ndarray[float],
+        center: (np.ndarray[float] | None) = None,
     ):
         shape = points.shape
         if len(shape) == 1:
@@ -22,7 +23,10 @@ class Stencil:
             self.dim = shape[1]
         self.points = points
 
-        self.center = self.points[0]
+        if center is None:
+            self.center = self.points[0]
+        else:
+            self.center = center
         self.scaling = np.max(np.abs(self.points - self.center))
 
     @property
@@ -31,7 +35,7 @@ class Stencil:
         return len(self.points)
 
     def shift_points(self, points: np.ndarray) -> np.ndarray:
-        return (points - self.center)/self.scaling
+        return (points - self.center) / self.scaling
 
     @property
     @cache
@@ -58,6 +62,8 @@ class Stencil:
         return P
 
     def interpolation_matrix(self, rbf: RBF, poly_deg: int = -1) -> np.ndarray[float]:
+        if poly_deg == -1:
+            return self.rbf_mat(rbf=rbf)
         P = self.poly_mat(poly_deg=poly_deg)
         basis_size = P.shape[1]
         zeros = np.zeros((basis_size, basis_size))
