@@ -7,6 +7,7 @@ RBF matrices based on polyharmonic spline RBFs.
 """
 
 from functools import cache, reduce
+from itertools import product
 from math import comb, perm
 import numpy as np
 import operator
