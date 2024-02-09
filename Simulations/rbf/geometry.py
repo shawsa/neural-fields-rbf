@@ -67,6 +67,29 @@ class Point:
     def __len__(self):
         return 2
 
+    def __add__(self, point2):
+        if isinstance(point2, Point):
+            return Point(*(self.arr + point2.arr))
+        return Point(*(self.arr + point2))
+
+    def __mul__(self, scalar):
+        return Point(scalar * self.x, scalar * self.y)
+
+    def __rmul__(self, scalar):
+        return self * scalar
+
+    def __sub__(self, point2):
+        return self + (-1 * point2)
+
+    def __truediv__(self, scalar):
+        return self * (1 / scalar)
+
+    def __radd__(self, point2):
+        return point2 + self
+
+    def __rmul(self, scalar):
+        return self * scalar
+
     @property
     def arr(self) -> np.ndarray[float]:
         return np.array([self.x, self.y])
@@ -88,11 +111,45 @@ class Triangle:
     B: Point
     C: Point
 
+    def __iter__(self):
+        yield self.A
+        yield self.B
+        yield self.C
+
+    @property
+    def points(self):
+        return np.array([point.arr for point in self])
+
+    @property
+    def plot_points(self):
+        return np.array([point.arr for point in self] + [self.A.arr])
+
+    def __add__(self, point2):
+        return Triangle(*(point + point2 for point in self))
+
+    def __radd__(self, point2):
+        return point2 + self
+
+    def __mul__(self, scalar):
+        return Triangle(*(point * scalar for point in self))
+
+    def __rmul(self, scalar):
+        return self * scalar
+
+    def __sub__(self, point2):
+        return self + (-1 * point2)
+
+    def __div__(self, scalar):
+        return self * 1 / scalar
+
+    def __truediv__(self, scalar):
+        return self * (1 / scalar)
+
     @property
     def centroid(self):
-        return (1/3)*np.array([
-            self.A.x + self.B.x + self.C.x,
-            self.A.y + self.B.y + self.C.y])
+        return (1 / 3) * np.array(
+            [self.A.x + self.B.x + self.C.x, self.A.y + self.B.y + self.C.y]
+        )
 
     @property
     def edges(self):
@@ -118,7 +175,7 @@ class Triangle:
                 y_slope
                 * fixed_quad(lambda t: func(*path(t)), t_start, t_stop, n=order)[0]
             )
-        return self.sign*total
+        return self.sign * total
 
     def poly_quad(self, poly: Monomial, order: int = 10):
         func = poly.adiff_x()

@@ -65,7 +65,9 @@ PolyPowGen = Generator[Monomial, None, None]
 @cache
 def poly_basis_dim(dim: int, deg: int) -> int:
     """The number of polynomial basis terms up to a given degree for a given
-    dimension."""
+    dimension. Returns 0 if deg < 0."""
+    if deg < 0:
+        return 0
     return comb(dim + deg, deg)
 
 

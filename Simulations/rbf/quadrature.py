@@ -1,53 +1,84 @@
-
-from .rbf import RBF
-from .linear_functional import LinearFunctional
-from .poly_utils import Monomial
-from rbf.quad_lib import get_right_triangle_integral_function
-
-from itertools import pairwise
 import numpy as np
 import numpy.linalg as la
+from rbf.geometry import Triangle, triangle
+from rbf.poly_utils import poly_powers_gen
+from rbf.quad_lib import get_right_triangle_integral_function
+from rbf.rbf import RBF
+from rbf.stencil import Stencil
+from scipy.spatial import Delaunay, KDTree
 
 
-def orthogonal_projection(O, A, B):
-    """Project the point O onto the line through A and B"""
-    rel_O = O - A
-    rel_B = B - A
-    proj = np.dot(rel_O, rel_B) / np.dot(rel_B, rel_B) * rel_B
-    return proj + A
+class QuadStencil(Stencil):
+    def __init__(self, points: np.ndarray[float], element: Triangle):
+        super(QuadStencil, self).__init__(points, center=element.centroid)
+        self.element = element
+        self.scaled_element = (element - self.center) / self.scale_factor
+
+    def weights(self, rbf: RBF, poly_deg: int):
+        right_triangle_integrate = get_right_triangle_integral_function(rbf)
+        mat = self.interpolation_matrix(rbf, poly_deg)
+        rhs = np.zeros_like(mat[0])
+        rhs[: len(self.points)] = np.array(
+            [
+                self.scaled_element.rbf_quad(point, right_triangle_integrate)
+                for point in self.scaled_points
+            ]
+        )
+
+        rhs[len(self.points) :] = np.array(
+            [
+                self.scaled_element.poly_quad(poly)
+                for poly in poly_powers_gen(self.dim, poly_deg)
+            ]
+        )
+        weights = la.solve(mat, rhs)
+        return weights[: len(self.points)] * self.scale_factor**2
 
 
-def area_sign(A, B, C):
-    arr1 = np.array([A[1] - B[1], B[0] - A[0]])
-    arr2 = np.array([C[0] - A[0], C[1] - A[1]])
-    return np.sign(np.dot(arr1, arr2))
+class LocalQuadStencil(QuadStencil):
+    def __init__(
+        self, points: np.ndarray[float], element: Triangle, mesh_indices=np.ndarray[int]
+    ):
+        super(LocalQuadStencil, self).__init__(points, element=element)
+        self.mesh_indices = mesh_indices
 
 
-# This is a linear functional, but the current call signatures of the
-# linear functional interface are incompatable
-class TriangleQuad:
-    def __init__(self, A, B, C, rbf: RBF):
-        self.A = A
-        self.B = B
-        self.C = C
-        self.func = get_right_triangle_integral_function(rbf)
+class LocalQuad:
+    def __init__(
+        self, points: np.ndarray[float], rbf: RBF, poly_deg: int, stencil_size: int
+    ):
+        self.points = points
+        self.rbf = rbf
+        self.poly_deg = poly_deg
+        self.stencil_size = stencil_size
+        self.kdt = KDTree(self.points)
+        self.initialize_mesh()
+        self.initialize_stencils()
+        self.generate_weights()
+
+    def initialize_mesh(self):
+        self.mesh = Delaunay(self.points)
 
     @property
-    def scale_power(self) -> np.ndarray[int]:
-        return 1
+    def elements(self):
+        for tri_indices in self.mesh.simplices:
+            yield triangle(self.mesh.points[tri_indices])
 
-    def rbf_op(self, rbf_center: np.ndarray) -> float:
-        area = 0
-        for X, Y in pairwise([self.A, self.B, self.C, self.A]):
-            Z = orthogonal_projection(rbf_center, X, Y)
-            a = la.norm(rbf_center - Z)
-            b = la.norm(X - Z)
-            # analytically integrate constant
-            area += area_sign(rbf_center, X, Z) * self.func(a, b)
-            b = la.norm(Y - Z)
-            area += area_sign(rbf_center, Z, Y) * self.func(a, b)
-        area *= area_sign(self.A, self.B, self.C)
-        return area
+    def initialize_stencils(self):
+        self.stencils = []
+        for element in self.elements:
+            _, neighbor_indices = self.kdt.query(element.centroid, self.stencil_size)
+            self.stencils.append(
+                LocalQuadStencil(
+                    self.points[neighbor_indices],
+                    element,
+                    neighbor_indices,
+                )
+            )
 
-    def poly_op(self, poly: Monomial) -> float:
-        ...
+    def generate_weights(self):
+        self.weights = np.zeros(len(self.points))
+        for stencil in self.stencils:
+            self.weights[stencil.mesh_indices] += stencil.weights(
+                self.rbf, self.poly_deg
+            )

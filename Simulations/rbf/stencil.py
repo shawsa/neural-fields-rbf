@@ -2,9 +2,7 @@
 Stencil class for RBF interpolation.
 """
 
-from functools import cache
 import numpy as np
-import numpy.linalg as la
 from .poly_utils import poly_basis_dim, poly_powers
 from .rbf import RBF, pairwise_diff, pairwise_dist
 
@@ -27,30 +25,21 @@ class Stencil:
             self.center = self.points[0]
         else:
             self.center = center
-        self.scaling = np.max(np.abs(self.points - self.center))
+        self.scaled_points = self.points - self.center
+        self.scale_factor = np.max(np.abs(self.points - self.center))
+        self.scaled_points /= self.scale_factor
 
     @property
-    @cache
     def num_points(self):
         return len(self.points)
 
-    def shift_points(self, points: np.ndarray) -> np.ndarray:
-        return (points - self.center) / self.scaling
-
-    @property
-    @cache
-    def scaled_points(self):
-        return self.shift_points(self.points)
-
     @property
     def pairwise_diff(self) -> np.ndarray[float]:
-        points = self.scaled_points
-        return pairwise_diff(points, points)
+        return pairwise_diff(self.scaled_points, self.scaled_points)
 
     @property
     def dist_mat(self) -> np.ndarray[float]:
-        points = self.scaled_points
-        return pairwise_dist(points, points)
+        return pairwise_dist(self.scaled_points, self.scaled_points)
 
     def rbf_mat(self, rbf: RBF):
         return rbf(self.dist_mat)
