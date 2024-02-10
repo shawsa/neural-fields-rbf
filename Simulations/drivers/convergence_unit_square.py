@@ -25,37 +25,42 @@ plt.rcParams.update(
 
 ns = [2**index for index in range(4, 8)]
 rbf = PHS(3)
-poly_degs = list(range(-1, 4))
+poly_degs = list(range(7))
 min_stencil_size = 7
 stencil_size_factor = 1.5
 
 x, y = sym.symbols("x y")
-foo_sym = sym.cos(x)**2 - y*sym.exp(y)
+foo_sym = sym.cos(x) ** 2 + y * sym.exp(y) + x * y
 foo = sym.lambdify((x, y), foo_sym)
 exact = float(sym.integrate(sym.integrate(foo_sym, (x, 0, 1)), (y, 0, 1)))
 
 results = {}
-
 for n in tqdm(ns):
     print("Generating Points")
     points = UnitSquare(n, verbose=True).points
     fs = foo(*points.T)
     for poly_deg in tqdm(poly_degs):
         stencil_size = max(
-                ceil(stencil_size_factor * poly_basis_dim(2, poly_deg)),
-                min_stencil_size)
+            ceil(stencil_size_factor * poly_basis_dim(2, poly_deg)), min_stencil_size
+        )
         qf = LocalQuad(points, rbf, poly_deg, stencil_size)
         approx = qf.weights @ fs
-        error = abs((approx - exact)/exact)
+        error = abs((approx - exact) / exact)
+        print(f"{n=}\t{poly_deg=}\t{error=}")
         results[n, poly_deg] = (points, qf, error)
 
 
 fig = plt.figure(figsize=(10, 7))
 ax = fig.add_subplot(111)
 for poly_deg in poly_degs:
-    errors = [results[n, poly_deg][2] for n in ns]
-    order = -np.log(errors[0]/errors[-1]) / np.log(ns[0] / ns[-1])
-    ax.loglog(ns, errors, ".-", label=f"deg={poly_deg}~$\\mathcal{{O}}({order:.2f})$")
+    errors = [results[n, poly_deg][2] for n in ns if (n, poly_deg) in results.keys()]
+    order = -np.log(errors[0] / errors[-1]) / np.log(ns[0] / ns[-1])
+    ax.loglog(
+        [n for n in ns if (n, poly_deg) in results.keys()],
+        errors,
+        ".-",
+        label=f"deg={poly_deg}~$\\mathcal{{O}}({order:.2f})$",
+    )
 
 ax.minorticks_off()
 ax.set_xticks(ns, ns)
