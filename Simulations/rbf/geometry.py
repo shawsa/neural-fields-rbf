@@ -4,6 +4,7 @@ import numpy as np
 import numpy.linalg as la
 from .poly_utils import Monomial
 from scipy.integrate import fixed_quad
+from scipy.spatial import Delaunay
 from typing import Callable
 
 
@@ -195,3 +196,20 @@ def triangle(mat: np.ndarray[float]) -> Triangle:
     assert mat.ndim == 2
     assert mat.shape == (3, 2)
     return Triangle(*starmap(Point, mat))
+
+
+def circumradius(points: np.ndarray[float]) -> float:
+    a = la.norm(points[0] - points[1])
+    b = la.norm(points[1] - points[2])
+    c = la.norm(points[2] - points[0])
+    return (
+        a * b * c / np.sqrt((a + b + c) * (b + c - a) * (c + a - b) * (a + b - c))
+    )
+
+
+def delaunay_covering_radius(mesh: Delaunay):
+    h = 0
+    for mesh_indices in mesh.simplices:
+        tri = mesh.points[mesh_indices]
+        h = max(h, circumradius(tri))
+    return h
