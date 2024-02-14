@@ -7,10 +7,10 @@ from rbf.rbf import PHS
 from scipy.spatial import Delaunay
 import sympy as sym
 
-n = 5
-# points = UnitSquare(n, verbose=True).points
-X, Y = np.meshgrid(np.linspace(0, 1, n), np.linspace(0, 1, n))
-points = np.array([X.ravel(), Y.ravel()]).T
+n = 7
+points = UnitSquare(n**2, verbose=True).points
+# X, Y = np.meshgrid(np.linspace(0, 1, n), np.linspace(0, 1, n))
+# points = np.array([X.ravel(), Y.ravel()]).T
 rbf = PHS(3)
 poly_deg = 2
 

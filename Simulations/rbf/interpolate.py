@@ -36,7 +36,7 @@ class Interpolator:
         self.poly_weights = weights[self.stencil.num_points :]
 
     def __call__(self, z):
-        z = self.stencil.shift_points(z)
+        z = self.stencil.shift_and_scale(z)
         rbf_val = sum(
             w * self.rbf(la.norm(z - point))
             for w, point in zip(self.rbf_weights, self.stencil.scaled_points)

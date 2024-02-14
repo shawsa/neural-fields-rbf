@@ -29,6 +29,9 @@ class Stencil:
         self.scale_factor = np.max(np.abs(self.points - self.center))
         self.scaled_points /= self.scale_factor
 
+    def shift_and_scale(self, points: np.ndarray[float]) -> np.ndarray[float]:
+        return 1/self.scale_factor * (points - self.center)
+
     @property
     def num_points(self):
         return len(self.points)

@@ -7,7 +7,7 @@ from math import ceil
 import numpy as np
 import numpy.linalg as la
 from rbf.geometry import circumradius, delaunay_covering_radius, triangle
-from rbf.points import UnitSquare
+from rbf.points.unit_square import UnitSquare, hex_limit_density
 
 # from rbf.poly_utils import poly_basis_dim
 from rbf.quadrature import LocalQuad
@@ -28,13 +28,13 @@ plt.rcParams.update(
 )
 
 
-repeats = 5
+repeats = 3
 # ns = [ceil(2**(index/2) for index in range(3, 8)]
-num_ns = 10
-ns = [int(n) for n in np.logspace(np.log2(7), np.log2(80), num_ns, base=2)]
+hs = np.logspace(np.log2(1e-1), np.log2(1e-2), 3, base=2)
+ns = list(map(hex_limit_density, hs))
 rbf = PHS(3)
-poly_degs = list(range(7))
-stencil_size = 35
+poly_degs = list(range(-1, 3))
+stencil_size = 11
 
 x, y = sym.symbols("x y")
 foo_sym = sym.exp(x*y)
@@ -44,9 +44,8 @@ exact = float(sym.integrate(sym.integrate(foo_sym, (x, 0, 1)), (y, 0, 1)))
 results = []
 tqdm_obj = tqdm(ns, leave=False, position=0)
 for n in tqdm_obj:
-    unit_square = UnitSquare(n, verbose=False, auto_settle=False)
     for _ in tqdm(range(repeats), leave=False, position=1):
-        unit_square.auto_settle()
+        unit_square = UnitSquare(n, verbose=False, auto_settle=True)
         points = unit_square.points
         mesh = Delaunay(points)
         h = delaunay_covering_radius(mesh)
@@ -70,7 +69,6 @@ for poly_deg, color in zip(poly_degs, colors):
             continue
         hs.append(h)
         errors.append(error)
-    # order = np.log(errors[0] / errors[-1]) / np.log(hs[0] / hs[-1])
     fit = linregress(np.log(hs), np.log(errors))
     ax.loglog(
         hs,
@@ -86,8 +84,8 @@ for poly_deg, color in zip(poly_degs, colors):
         label=f"deg={poly_deg}~$\\mathcal{{O}}({fit.slope:.2f})$",
     )
 
-ax.set_xscale("log", base=2)
-ax.set_yscale("log", base=2)
+ax.set_xscale("log")
+ax.set_yscale("log")
 ax.set_xlabel("$h$")
 ax.set_ylabel("Relative Error")
 ax.set_title(f"Integral of ${sym.latex(foo_sym)}$ over $[0, 1]^2$")

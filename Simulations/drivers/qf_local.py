@@ -6,8 +6,7 @@ from rbf.quadrature import LocalQuad
 from rbf.rbf import PHS
 import sympy as sym
 
-n = ceil(sqrt(2000))
-points = UnitSquare(n, verbose=True).points
+points = UnitSquare(2000, verbose=True).points
 # X, Y = np.meshgrid(np.linspace(0, 1, n), np.linspace(0, 1, n))
 # points = np.array([X.ravel(), Y.ravel()]).T
 rbf = PHS(3)

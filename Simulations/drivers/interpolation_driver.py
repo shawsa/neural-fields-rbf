@@ -2,8 +2,6 @@
 A driver testing 2D interpolation on scattered nodes.
 """
 
-import set_path
-
 from functools import partial
 import matplotlib
 import matplotlib.pyplot as plt
@@ -52,7 +50,7 @@ fs_dense = test_func(xs_dense, ys_dense)
 # RBF sample points
 ########################
 
-xs, ys = UnitSquare(21, verbose=True).points.T
+xs, ys = UnitSquare(21**2, verbose=True).points.T
 
 # Cartesian points
 # xs, ys = np.meshgrid(
@@ -113,8 +111,6 @@ for index, (x, y) in tqdm(
     errors.ravel()[index] = abs(approx(np.array((x, y))) - test_func(x, y))
 
 print(f"max error over domain: {np.max(errors): .3E}")
-
-plt.close()
 
 fig = plt.figure("RBF interpolation error", figsize=(8, 4))
 grid = matplotlib.gridspec.GridSpec(1, 7)

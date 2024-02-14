@@ -28,6 +28,16 @@ class GaussianRepulsionKernel(RepulsionKernel):
         return vec * self.height * np.exp(-((r / self.shape) ** 2))
 
 
+class ConstRepulsionKernel(RepulsionKernel):
+    def __init__(self, const: float):
+        self.const = const
+
+    def __call__(self, direction: np.ndarray):
+        r = la.norm(direction)
+        vec = direction / r
+        return self.const*vec
+
+
 class PointCloud:
     def __init__(self, points: np.ndarray, num_interior: int, num_boundary: int):
         assert num_interior + num_boundary == len(points)
