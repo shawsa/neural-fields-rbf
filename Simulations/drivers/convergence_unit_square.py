@@ -1,12 +1,12 @@
 """
 Run convergence Tests for number of points
 """
+from collections import namedtuple
 import matplotlib.pyplot as plt
-
 from math import ceil
 import numpy as np
 import numpy.linalg as la
-from rbf.geometry import circumradius, delaunay_covering_radius, triangle
+from rbf.geometry import circumradius, delaunay_covering_radius_stats, triangle
 from rbf.points.unit_square import UnitSquare, hex_limit_density
 
 # from rbf.poly_utils import poly_basis_dim
@@ -28,47 +28,50 @@ plt.rcParams.update(
 )
 
 
-repeats = 3
-# ns = [ceil(2**(index/2) for index in range(3, 8)]
-hs = np.logspace(np.log2(1e-1), np.log2(1e-2), 3, base=2)
-ns = list(map(hex_limit_density, hs))
+repeats = 5
+hs = np.logspace(np.log2(1e-1), np.log2(1e-2), 7, base=2)
 rbf = PHS(3)
-poly_degs = list(range(-1, 3))
-stencil_size = 11
+poly_degs = list(range(7))
+stencil_size = 30
+
+
+ns = list(map(hex_limit_density, hs))
 
 x, y = sym.symbols("x y")
-foo_sym = sym.exp(x*y)
+foo_sym = sym.cos(5*x) * sym.sin(7*y) + 1
 foo = sym.lambdify((x, y), foo_sym)
 exact = float(sym.integrate(sym.integrate(foo_sym, (x, 0, 1)), (y, 0, 1)))
 
 results = []
+Result = namedtuple("Result", ["n", "h_max", "h_ave", "poly_deg", "error"])
 tqdm_obj = tqdm(ns, leave=False, position=0)
 for n in tqdm_obj:
     for _ in tqdm(range(repeats), leave=False, position=1):
         unit_square = UnitSquare(n, verbose=False, auto_settle=True)
         points = unit_square.points
         mesh = Delaunay(points)
-        h = delaunay_covering_radius(mesh)
+        h_max, h_ave = delaunay_covering_radius_stats(mesh)
         fs = foo(*points.T)
         for poly_deg in tqdm(poly_degs, leave=False, position=2):
             qf = LocalQuad(points, rbf, poly_deg, stencil_size)
             approx = qf.weights @ fs
             error = abs((approx - exact) / exact)
             tqdm_obj.set_description(f"{n=} | {poly_deg=} | {error=:.3E}")
-            results.append((n, poly_deg, h, error))
+            results.append(Result(
+                n=n,
+                h_max=h_max,
+                h_ave=h_ave,
+                poly_deg=poly_deg,
+                error=error
+            ))
 
 
 fig = plt.figure(figsize=(10, 7))
 ax = fig.add_subplot(111)
 colors = ["r", "b", "g", "c", "m", "y"] * 2
 for poly_deg, color in zip(poly_degs, colors):
-    hs = []
-    errors = []
-    for n, poly_deg2, h, error in results:
-        if poly_deg2 != poly_deg:
-            continue
-        hs.append(h)
-        errors.append(error)
+    hs = [result.h_ave for result in results if result.poly_deg == poly_deg]
+    errors = [result.error for result in results if result.poly_deg == poly_deg]
     fit = linregress(np.log(hs), np.log(errors))
     ax.loglog(
         hs,
@@ -86,7 +89,8 @@ for poly_deg, color in zip(poly_degs, colors):
 
 ax.set_xscale("log")
 ax.set_yscale("log")
-ax.set_xlabel("$h$")
+ax.set_xlabel("$h_{ave}$")
+# ax.set_xlabel("$h_{max}$")
 ax.set_ylabel("Relative Error")
 ax.set_title(f"Integral of ${sym.latex(foo_sym)}$ over $[0, 1]^2$")
 ax.legend()
@@ -106,3 +110,4 @@ for ext in [".pdf", ".png"]:
 # centroids = np.array(centroids)
 # plt.scatter(*centroids.T, c=circum_radii)
 # plt.colorbar(label="$h$")
+# plt.savefig("media/h_spacing.png")

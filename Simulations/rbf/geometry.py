@@ -207,9 +207,6 @@ def circumradius(points: np.ndarray[float]) -> float:
     )
 
 
-def delaunay_covering_radius(mesh: Delaunay):
-    h = 0
-    for mesh_indices in mesh.simplices:
-        tri = mesh.points[mesh_indices]
-        h = max(h, circumradius(tri))
-    return h
+def delaunay_covering_radius_stats(mesh: Delaunay):
+    hs = [circumradius(mesh.points[mesh_indices]) for mesh_indices in mesh.simplices]
+    return max(hs), np.average(hs)
