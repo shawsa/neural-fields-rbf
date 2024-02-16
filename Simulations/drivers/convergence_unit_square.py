@@ -28,8 +28,8 @@ plt.rcParams.update(
 )
 
 
-repeats = 5
-hs = np.logspace(np.log2(1e-1), np.log2(1e-2), 7, base=2)
+repeats = 20
+hs = np.logspace(np.log2(1e-1), np.log2(1e-2), 10, base=2)
 rbf = PHS(3)
 poly_degs = list(range(7))
 stencil_size = 30

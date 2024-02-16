@@ -11,7 +11,6 @@ from typing import Callable
 
 class RepulsionKernel(ABC):
     """Used to redistribute nodes to make them more regular."""
-
     @abstractmethod
     def __call__(self, direction: np.ndarray):
         raise NotImplementedError
@@ -22,28 +21,42 @@ class GaussianRepulsionKernel(RepulsionKernel):
         self.shape = shape
         self.height = height
 
-    def __call__(self, direction: np.ndarray):
-        r = la.norm(direction)
-        vec = direction / r
-        return vec * self.height * np.exp(-((r / self.shape) ** 2))
+    def __call__(self, points: np.ndarray):
+        ret = points.copy()
+        mags = la.norm(ret, axis=1)
+        mags = self.height * np.exp(-(mags/self.shape)**2) / mags
+        ret[:, 0] *= mags
+        ret[:, 1] *= mags
+        return ret
 
 
 class ConstRepulsionKernel(RepulsionKernel):
     def __init__(self, const: float):
         self.const = const
 
-    def __call__(self, direction: np.ndarray):
-        r = la.norm(direction)
-        vec = direction / r
-        return self.const*vec
+    def __call__(self, points: np.ndarray):
+        ret = points.copy()
+        mags = la.norm(ret, axis=1)
+        ret[:, 0] /= mags
+        ret[:, 1] /= mags
+        return self.const * ret
 
 
 class PointCloud:
-    def __init__(self, points: np.ndarray, num_interior: int, num_boundary: int):
-        assert num_interior + num_boundary == len(points)
-        self.points = points
+    def __init__(
+        self,
+        points: np.ndarray,
+        num_interior: int,
+        num_boundary: int,
+        num_ghost: int = 0,
+    ):
+        assert num_interior + num_boundary + num_ghost == len(points)
+        self.all_points = points
         self.num_interior = num_interior
         self.num_boundary = num_boundary
+        self.num_ghost = num_ghost
+
+        self.points = points[: num_interior + num_boundary]
 
     @property
     def inner(self):
@@ -55,7 +68,12 @@ class PointCloud:
 
     @property
     def boundary(self):
-        return self.points[self.num_interior :]
+        return self.points[self.num_interior : self.num_interior + self.num_boundary]
+
+    @property
+    def ghost(self):
+        start = self.num_interior + self.num_boundary
+        return self.all_points[start : start + self.num_ghost]
 
     @boundary.setter
     def boundary(self, value):
@@ -68,13 +86,19 @@ class PointCloud:
         rate: float,
         num_neighbors: int,
         force: Callable = None,
+        use_ghost: bool = False,
     ):
-        kdt = KDTree(self.points)
-        update = np.empty_like(self.inner)
+        points = self.points
+        if use_ghost:
+            points = self.all_points
+        kdt = KDTree(points)
+        update = np.zeros_like(self.inner)
         for index, point in enumerate(self.inner):
-            _, neighbors_indices = kdt.query(point, num_neighbors)
-            neighbors = self.points[[id for id in neighbors_indices if id != index]]
-            update[index] = sum(kernel(x2 - point) for x2 in neighbors) / len(neighbors)
-            if force is not None:
-                update[index] -= force(point)
+            _, neighbors_indices = kdt.query(point, num_neighbors + 1)
+            # neighbors = points[[id for id in neighbors_indices if id != index]]
+            neighbors = points[neighbors_indices][1:]
+            # update[index] = sum(kernel(x2 - point) for x2 in neighbors) / len(neighbors)
+            update[index] = np.average(kernel(neighbors - point), axis=0)
         self.inner -= rate * update
+        if force is not None:
+            self.inner += force(self.inner)
