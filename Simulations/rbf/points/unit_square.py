@@ -58,13 +58,17 @@ class UnitSquare(PointCloud):
         ]
         boundary_spacing = 1 / self.n
         ghost_per_side = self.n + 2
-        side = np.linspace(-boundary_spacing/2, 1 + boundary_spacing/2, ghost_per_side)
-        ghost_points[: ghost_per_side][:, 0] = side
-        ghost_points[: ghost_per_side][:, 1] = -boundary_spacing
+        side = np.linspace(
+            -boundary_spacing / 2, 1 + boundary_spacing / 2, ghost_per_side
+        )
+        ghost_points[:ghost_per_side][:, 0] = side
+        ghost_points[:ghost_per_side][:, 1] = -boundary_spacing
         ghost_points[ghost_per_side : 2 * ghost_per_side][:, 0] = 1 + boundary_spacing
         ghost_points[ghost_per_side : 2 * ghost_per_side][:, 1] = side
         ghost_points[2 * ghost_per_side : 3 * ghost_per_side][:, 0] = 1 - side
-        ghost_points[2 * ghost_per_side : 3 * ghost_per_side][:, 1] = 1 + boundary_spacing
+        ghost_points[2 * ghost_per_side : 3 * ghost_per_side][:, 1] = (
+            1 + boundary_spacing
+        )
         ghost_points[3 * ghost_per_side :][:, 0] = -boundary_spacing
         ghost_points[3 * ghost_per_side :][:, 1] = 1 - side
 
@@ -82,6 +86,7 @@ class UnitSquare(PointCloud):
         self.const_kernel = ConstRepulsionKernel(self.h / 2)
         self.repulsion_kernel = GaussianRepulsionKernel(height=1, shape=self.h)
         # self.repulsion_kernel = PowerLawRepulsionKernel(scale=1, power=2)
+
         if auto_settle:
             self.auto_settle(verbose=verbose)
 
@@ -90,7 +95,7 @@ class UnitSquare(PointCloud):
         # return 10*self.h * (1 + np.tanh(-20 * x / self.h))
         # return self.h * np.exp(-2 / self.h * (x - self.h / 2))
         # return 0
-        return (-x + self.h/2) * np.heaviside(-x, .5)
+        return (-x + self.h / 2) * np.heaviside(-x, 0.5)
 
     def boundary_force(self, points):
         force = np.zeros_like(points)
@@ -110,7 +115,7 @@ class UnitSquare(PointCloud):
                 rate=rate / num_neighbors,
                 num_neighbors=num_neighbors,
                 force=self.boundary_force,
-                use_ghost=True
+                use_ghost=True,
             )
 
     def jostle(self, repeat: int = 1, verbose: bool = False):
@@ -124,7 +129,7 @@ class UnitSquare(PointCloud):
                 rate=1 / num_neighbors,
                 num_neighbors=num_neighbors,
                 force=self.boundary_force,
-                use_ghost=True
+                use_ghost=True,
             )
 
     def auto_settle(self, verbose=False):
@@ -142,11 +147,10 @@ if __name__ == "__main__":
             PointCloud,
             GaussianRepulsionKernel,
             ConstRepulsionKernel,
-            PowerLawRepulsionKernel,
         )
 
     plt.ion()
-    N = 10_000
+    N = 2_000
     unit_square = UnitSquare(N, auto_settle=False)
     # unit_square.auto_settle(verbose=True)
 

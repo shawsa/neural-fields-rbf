@@ -11,6 +11,7 @@ from typing import Callable
 
 class RepulsionKernel(ABC):
     """Used to redistribute nodes to make them more regular."""
+
     @abstractmethod
     def __call__(self, direction: np.ndarray):
         raise NotImplementedError
@@ -24,7 +25,7 @@ class GaussianRepulsionKernel(RepulsionKernel):
     def __call__(self, points: np.ndarray):
         ret = points.copy()
         mags = la.norm(ret, axis=1)
-        mags = self.height * np.exp(-(mags/self.shape)**2) / mags
+        mags = self.height * np.exp(-((mags / self.shape) ** 2)) / mags
         ret[:, 0] *= mags
         ret[:, 1] *= mags
         return ret
