@@ -1,3 +1,4 @@
+from math import ceil, sqrt
 import numpy as np
 from numpy.polynomial import Polynomial as nppoly
 import pickle
@@ -38,9 +39,7 @@ class HermiteBump:
         for p, c in enumerate(coeffs):
             poly += c * self.r ** (self.order + 1) * (self.r - 1) ** p
         self.poly_sym = poly.subs(self.r, self.r / self.radius)
-        self.poly_coeffs = [
-            float(c) for c in sym.Poly(self.poly_sym).all_coeffs()
-        ]
+        self.poly_coeffs = [float(c) for c in sym.Poly(self.poly_sym).all_coeffs()]
         self.poly_full = nppoly(self.poly_coeffs[::-1])
 
     def profile(self, rs: np.ndarray[float]):
@@ -99,20 +98,58 @@ def cartesian_grid(n: int):
     return points
 
 
-def hex_grid(n: int):
-    """Return a hexagonal grid with approximately n points."""
-    n_x = int(np.ceil(np.sqrt(n / np.sqrt(3))))
-    n_y = int(np.ceil(n_x * np.sqrt(3) / 2))
-    h_x = 1 / (n_x - 1) / 2
-    h_y = 1 / (n_y - 1) / 2
-    X, Y = np.meshgrid(np.linspace(0, 1, n_x), np.linspace(0, 1, n_y))
-    X_inner, Y_inner = np.meshgrid(
-        np.linspace(h_x, 1 - h_x, n_x - 1), np.linspace(h_y, 1 - h_y, n_y - 1)
-    )
-    X = np.append(X, X_inner)
-    Y = np.append(Y, Y_inner)
-    points = np.array([X.flatten(), Y.flatten()]).T
+def hex_grid(N: int):
+    N_inner_approx = N - int(ceil(sqrt(N) * sqrt(3))) * 4
+    A, B, C = 2 * sqrt(3), -(1 + sqrt(3)), 1 - N_inner_approx
+    ny_approx = (-B + sqrt(B**2 - 4 * A * C)) / (2 * A)
+    ny = int(ceil(ny_approx))
+    nx = int(ceil(sqrt(3) * ny_approx))
+    X, Y = np.meshgrid(np.arange(0, nx, 1), np.arange(0, ny) * np.sqrt(3))
+    h = 1 / max(np.max(X), np.max(Y))
+    X2 = X[:-1, :-1] + 0.5
+    Y2 = Y[:-1, :-1] + np.sqrt(3) / 2
+    inner_points = np.array(
+        [[*X.flatten(), *X2.flatten()], [*Y.flatten(), *Y2.flatten()]]
+    ).T
+    inner_points *= h * (1 - h)
+    inner_points[:, 0] += (1 - np.max(inner_points[:, 0])) / 2
+    inner_points[:, 1] += (1 - np.max(inner_points[:, 1])) / 2
+    N_inner = len(inner_points)
+    n_side = ceil((N - N_inner) / 4)
+    N = 4 * n_side + N_inner
+
+    points = np.zeros((N, 2))
+    side = np.linspace(0, 1, n_side, endpoint=False)
+    # bottom
+    points[:n_side, 0] = side
+    # right
+    points[n_side : 2 * n_side, 0] = 1
+    points[n_side : 2 * n_side, 1] = side
+    # top
+    points[2 * n_side : 3 * n_side, 0] = 1 - side
+    points[2 * n_side : 3 * n_side, 1] = 1
+    # left
+    points[3 * n_side : 4 * n_side, 1] = 1 - side
+
+    points[4 * n_side :] = inner_points
+
     return points
+
+
+# def hex_grid(n: int):
+#     """Return a hexagonal grid with approximately n points."""
+#     n_x = int(np.ceil(np.sqrt(n / np.sqrt(3))))
+#     n_y = int(np.ceil(n_x * np.sqrt(3) / 2))
+#     h_x = 1 / (n_x - 1) / 2
+#     h_y = 1 / (n_y - 1) / 2
+#     X, Y = np.meshgrid(np.linspace(0, 1, n_x), np.linspace(0, 1, n_y))
+#     X_inner, Y_inner = np.meshgrid(
+#         np.linspace(h_x, 1 - h_x, n_x - 1), np.linspace(h_y, 1 - h_y, n_y - 1)
+#     )
+#     X = np.append(X, X_inner)
+#     Y = np.append(Y, Y_inner)
+#     points = np.array([X.flatten(), Y.flatten()]).T
+#     return points
 
 
 def random_points(n: int, verbose=False):
@@ -174,3 +211,8 @@ if __name__ == "__main__":
         plt.plot(rs, foo.profile(rs), label=f"deg={foo.deg}")
     plt.legend()
     plt.ylim(-0.1, 1.1)
+
+    points = better_hex(4_000)
+    plt.plot(*points.T, "k.")
+    plt.axis("equal")
+    print(np.max(points, axis=0))

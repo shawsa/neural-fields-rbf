@@ -14,19 +14,19 @@ FILE_PREFIX = "media/"
 
 rbf = PHS(3)
 poly_deg = 3
-stencil_size = 19
-n = 1_000
+stencil_size = 21
+n = 4_000
 
 sample_density = 801
 
 # points
-# points, point_set = random_points(n, verbose=True), "random"
+points, point_set = random_points(n, verbose=True), "random"
 # points, point_set = cartesian_grid(n), "cartesian"
-points, point_set = hex_grid(n), "hex"
+# points, point_set = hex_grid(n), "hex"
 
 # test function
 radius = 0.1
-# bump, test_func = Gaussian(radius / 2), "gauss"
+bump, test_func = Gaussian(radius / 2), "gauss"
 bump, test_func = HermiteBump(order=3, radius=radius), "hermite"
 
 plt.rcParams.update(

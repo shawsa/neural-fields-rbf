@@ -38,7 +38,9 @@ HEX_FILE = "data/hex_stencil_sizes.pickle"
 w = sym.cos(sym.pi / 3) + sym.I * sym.sin(sym.pi / 3)
 
 stencil = [(1 * w**i).expand() for i in range(6)]
-points = [0 + 0 * sym.I]
+points = [0 + 0 * sym.I, 1 + 0*sym.I, w]
+center = sum(points) / len(points)
+points = [p - center for p in points]
 for _ in range(ceil(2 / sqrt(3) * N)):
     new_points = []
     for p in points:
@@ -57,6 +59,7 @@ ys = [float(sym.im(p)) for p in points]
 
 plt.figure("hex")
 plt.plot(xs, ys, "k.")
+plt.plot(0, 0, "g*")
 ts = np.linspace(-np.pi, np.pi, 501)
 for r in map(float, dists_unique):
     xs = r * np.cos(ts)
