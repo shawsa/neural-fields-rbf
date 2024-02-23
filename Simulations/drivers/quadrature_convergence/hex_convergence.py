@@ -146,20 +146,29 @@ if False:
 
 # make plot
 
-plt.figure()
-for poly_deg, color in zip(poly_degs, TABLEAU_COLORS.keys()):
-    my_res = [result for result in results if result.poly_deg == poly_deg]
-    hs = [1/sqrt(result.n) for result in my_res]
-    errs = [result.inner_error_stats.average for result in my_res]
-    fit = linregress(np.log(hs), np.log(errs))
-    plt.loglog(hs, errs, ".", color=color)
-    plt.loglog(
-        hs,
-        [np.exp(fit.intercept + np.log(h) * fit.slope) for h in hs],
-        "-",
-        color=color,
-        label=f"deg={poly_deg}~$\\mathcal{{O}}({fit.slope:.2f})$",
-    )
-plt.legend()
-plt.ylabel("Max error")
-plt.xlabel("$N^{-1/2}$")
+for err_str, err_func in [
+    ("max error", lambda result: result.error_stats.max),
+    ("average error", lambda result: result.error_stats.average),
+    ("median error", lambda result: result.error_stats.median),
+    ("interior max error", lambda result: result.inner_error_stats.max),
+    ("interior average error", lambda result: result.inner_error_stats.average),
+    ("interior median error", lambda result: result.inner_error_stats.median),
+]:
+    plt.figure(err_str)
+    for poly_deg, color in zip(poly_degs, TABLEAU_COLORS.keys()):
+        my_res = [result for result in results if result.poly_deg == poly_deg]
+        hs = [1/sqrt(result.n) for result in my_res]
+        errs = list(map(err_func, my_res))
+        fit = linregress(np.log(hs), np.log(errs))
+        plt.loglog(hs, errs, ".", color=color)
+        plt.loglog(
+            hs,
+            [np.exp(fit.intercept + np.log(h) * fit.slope) for h in hs],
+            "-",
+            color=color,
+            label=f"deg={poly_deg}~$\\mathcal{{O}}({fit.slope:.2f})$",
+        )
+    plt.legend()
+    plt.ylabel(err_str)
+    plt.xlabel("$N^{-1/2}$")
+    plt.savefig("media/hex_convergence_" + err_str + ".png")
