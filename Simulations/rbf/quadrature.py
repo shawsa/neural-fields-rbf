@@ -18,11 +18,14 @@ class QuadStencil(Stencil):
         right_triangle_integrate = get_right_triangle_integral_function(rbf)
         mat = self.interpolation_matrix(rbf, poly_deg)
         rhs = np.zeros_like(mat[0])
-        rhs[: len(self.points)] = np.array(
-            [
-                self.scaled_element.rbf_quad(point, right_triangle_integrate)
-                for point in self.scaled_points
-            ]
+        # rhs[: len(self.points)] = np.array(
+        #     [
+        #         self.scaled_element.rbf_quad(point, right_triangle_integrate)
+        #         for point in self.scaled_points
+        #     ]
+        # )
+        rhs[: len(self.points)] = self.scaled_element.rbf_quad(
+            self.scaled_points, right_triangle_integrate
         )
 
         rhs[len(self.points) :] = np.array(

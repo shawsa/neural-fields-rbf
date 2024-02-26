@@ -5,6 +5,7 @@ Classes for radial basis functions.
 from abc import ABC, abstractmethod, abstractstaticmethod
 import numpy as np
 import numpy.linalg as la
+from scipy.spatial import distance_matrix
 
 
 def pairwise_diff(p1: np.ndarray[float], p2: np.ndarray[float]) -> np.ndarray[float]:
@@ -15,12 +16,15 @@ def pairwise_diff(p1: np.ndarray[float], p2: np.ndarray[float]) -> np.ndarray[fl
     return np.array([[(x - y) for x in p1] for y in p2])
 
 
-def pairwise_dist(p1: np.ndarray[float], p2: np.ndarray[float]) -> np.ndarray[float]:
-    """Return a matrix of the pairwise distances between two
-    vectors of points.
-    The points must be of the same dimension.
-    """
-    return np.array([[la.norm(x - y) for x in p1] for y in p2])
+# def pairwise_dist(p1: np.ndarray[float], p2: np.ndarray[float]) -> np.ndarray[float]:
+#     """Return a matrix of the pairwise distances between two
+#     vectors of points.
+#     The points must be of the same dimension.
+#     """
+#     return np.array([[la.norm(x - y) for x in p1] for y in p2])
+
+
+pairwise_dist = distance_matrix
 
 
 class RBF(ABC):
