@@ -14,6 +14,8 @@ from utils import (
     PeriodicTile,
     quad_test,
 )
+from tqdm import tqdm
+
 
 plt.rcParams.update(
     {

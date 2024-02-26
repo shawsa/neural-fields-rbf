@@ -17,14 +17,31 @@ def orthogonal_projection(O, A, B):
     """Project the point O onto the line through A and B"""
     rel_O = O - A
     rel_B = B - A
-    proj = np.dot(rel_O, rel_B) / np.dot(rel_B, rel_B) * rel_B
+    proj = (rel_O @ rel_B.T) / (rel_B @ rel_B.T) * rel_B
     return proj + A
 
 
-def area_sign(A, B, C):
-    arr1 = np.array([A[1] - B[1], B[0] - A[0]])
-    arr2 = np.array([C[0] - A[0], C[1] - A[1]])
-    return np.sign(np.dot(arr1, arr2))
+def area_sign(
+    A: np.ndarray[float], B: np.ndarray[float], C: np.ndarray[float]
+) -> np.ndarray[float]:
+    A = A.T
+    B = B.T
+    C = C.T
+    if A.ndim == 1:
+        A = A[:, np.newaxis]
+    if B.ndim == 1:
+        B = B[:, np.newaxis]
+    if C.ndim == 1:
+        C = C[:, np.newaxis]
+    # arr1 = np.array([A[1] - B[1], B[0] - A[0]])
+    arr1 = B - A
+    arr1[1] = A[1] - B[1]
+    arr1 = arr1[::-1]
+    # arr2 = np.array([C[0] - A[0], C[1] - A[1]])
+    arr2 = C - A
+    ret = np.sign(np.sum(arr1 * arr2, axis=0))
+    # return np.sign(np.dot(arr1, arr2))
+    return ret
 
 
 def get_right_triangles(A, B, C, O):
@@ -42,12 +59,12 @@ def integrate_triangle(
     """Integrate the function phi(|X - O|) over the triangular patch ABC"""
     area = 0
     for X, Y in pairwise([A, B, C, A]):
-        Z = orthogonal_projection(O, X, Y)
-        a = la.norm(O - Z)
-        b = la.norm(X - Z)
+        Z = orthogonal_projection(O, X.reshape(1, 2), Y.reshape(1, 2))
+        a = la.norm(O - Z, axis=1)
+        b = la.norm(X - Z, axis=1)
         # analytically integrate constant
         area += area_sign(O, X, Z) * right_triangle_integrate(a, b)
-        b = la.norm(Y - Z)
+        b = la.norm(Y - Z, axis=1)
         area += area_sign(O, Z, Y) * right_triangle_integrate(a, b)
     area *= area_sign(A, B, C)
     return area
@@ -202,9 +219,7 @@ def circumradius(points: np.ndarray[float]) -> float:
     a = la.norm(points[0] - points[1])
     b = la.norm(points[1] - points[2])
     c = la.norm(points[2] - points[0])
-    return (
-        a * b * c / np.sqrt((a + b + c) * (b + c - a) * (c + a - b) * (a + b - c))
-    )
+    return a * b * c / np.sqrt((a + b + c) * (b + c - a) * (c + a - b) * (a + b - c))
 
 
 def delaunay_covering_radius_stats(mesh: Delaunay):

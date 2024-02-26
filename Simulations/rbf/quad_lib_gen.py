@@ -17,6 +17,28 @@ DICT_NAME = "right_triangle_integrate_dict"
 LIB_FILE = "quad_lib.py"
 GEN_CODE_BANNER = "# GENERATED CODE"
 
+NP_SUB = {
+    "math." + func: "np." + func
+    for func in [
+        "log",
+        "pi",
+        "sqrt",
+    ]
+}
+
+# careful of the order of replacement e.g. arcsinh before arcsin
+NP_SUB_SPECIAL = {
+    "math.asinh": "np.arcsinh",
+    "math.log": "np.log",
+    "math.sqrt": "np.sqrt",
+}
+
+
+def numpy_subs(code: str) -> str:
+    for key, val in {**NP_SUB, **NP_SUB_SPECIAL}.items():
+        code = code.replace(key, val)
+    return code
+
 
 def generate(expr_str: str):
     phi = parser.parse_expr(expr_str)
@@ -26,7 +48,11 @@ def generate(expr_str: str):
     assert a in triangle_integral.free_symbols
     assert b in triangle_integral.free_symbols
     assert len(triangle_integral.free_symbols) == 2
-    return DICT_NAME + f'["{expr_str}"] = lambda a, b:' + pycode(triangle_integral)
+    return (
+        DICT_NAME
+        + f'["{expr_str}"] = lambda a, b:'
+        + numpy_subs(pycode(triangle_integral))
+    )
 
 
 def add_to_library(expr_str: str):
@@ -39,9 +65,9 @@ def add_to_library(expr_str: str):
 
 def clear_library():
     print("Clearing library...")
-    with open(LIB_FILE, 'r') as f:
+    with open(LIB_FILE, "r") as f:
         lines = f.readlines()
-    with open(LIB_FILE, 'w') as f:
+    with open(LIB_FILE, "w") as f:
         for line in lines:
             f.write(line)
             if GEN_CODE_BANNER in line:
@@ -52,7 +78,7 @@ def append_test():
     print("Appending dunder main test code...")
     with open(LIB_FILE, "a") as f:
         f.write('\n\nif __name__ == "__main__":\n')
-        f.write(" "*4 + "test_dict()")
+        f.write(" " * 4 + "test_dict()")
 
 
 def make_black():
