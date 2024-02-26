@@ -10,24 +10,24 @@ from tqdm import tqdm
 from utils import Gaussian, HermiteBump, random_points, hex_grid, cartesian_grid
 
 
-FILE_PREFIX = "media/"
+FILE_PREFIX = "media/mesh_test_"
 
 rbf = PHS(3)
 poly_deg = 3
 stencil_size = 21
-n = 4_000
+n = 1_000
 
 sample_density = 801
 
 # points
-points, point_set = random_points(n, verbose=True), "random"
-# points, point_set = cartesian_grid(n), "cartesian"
+# points, point_set = random_points(n, verbose=True), "random"
+points, point_set = cartesian_grid(n), "cartesian"
 # points, point_set = hex_grid(n), "hex"
 
 # test function
 radius = 0.1
 bump, test_func = Gaussian(radius / 2), "gauss"
-bump, test_func = HermiteBump(order=3, radius=radius), "hermite"
+# bump, test_func = HermiteBump(order=3, radius=radius), "hermite"
 
 plt.rcParams.update(
     {
@@ -121,5 +121,5 @@ ax_hist.set_xlabel("weights")
 grid.tight_layout(fig)
 
 plt.savefig(
-    FILE_PREFIX + point_set + "_" + test_func + "_spatial_analysis.png", dpi=300
+    FILE_PREFIX + point_set + "_" + test_func + ".png", dpi=300
 )
