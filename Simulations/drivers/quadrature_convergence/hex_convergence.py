@@ -2,6 +2,7 @@
 Run convergence Tests for number of points
 """
 from collections import namedtuple
+from dataclasses import dataclass
 from math import ceil, sqrt
 from matplotlib.colors import TABLEAU_COLORS
 import matplotlib.pyplot as plt
@@ -12,17 +13,24 @@ from rbf.quadrature import LocalQuad
 from rbf.rbf import PHS
 from scipy.stats import linregress
 from tqdm import tqdm
-from utils import HermiteBump, hex_grid, hex_stencil_min
+from utils import (
+    HermiteBump,
+    PeriodicTile,
+    hex_grid,
+    hex_stencil_min,
+    covering_dist,
+    quad_test,
+)
 
 
 DATA_FILE = "data/hex_convergence_hermite.pickle"
 
 rbf = PHS(3)
-poly_degs = range(5)
-stencil_size_factor = 1.2
-h_targets = np.logspace(-1, -2, 21)
+poly_degs = range(1, 6)
+stencil_size_factor = 1.5
+h_targets = np.logspace(-4, -7, 11, base=2)[::-1]
 
-sample_density = 801
+sample_density = 101
 bump_order = 3
 bump_radius = 0.1
 
@@ -33,7 +41,35 @@ def get_stencil_size(poly_deg: int) -> int:
     return hex_stencil_min(ceil(stencil_size_factor * (poly_deg + 1) * (poly_deg + 2)))
 
 
-bump = HermiteBump(order=bump_order, radius=bump_radius)
+@dataclass
+class SummaryStats:
+    min: float
+    max: float
+    median: float
+    average: float
+
+
+def summary_stats(vec: np.ndarray[float]) -> SummaryStats:
+    return SummaryStats(
+        min=np.min(vec),
+        max=np.max(vec),
+        median=np.median(vec),
+        average=np.average(vec),
+    )
+
+
+@dataclass
+class Result:
+    n: int
+    poly_deg: int
+    stencil_size: int
+    covering_stats: SummaryStats
+    inner_covering_stats: SummaryStats
+    error_stats: SummaryStats
+    inner_error_stats: SummaryStats
+
+
+bump = PeriodicTile(HermiteBump(order=bump_order, radius=bump_radius))
 
 plt.rcParams.update(
     {
@@ -42,47 +78,11 @@ plt.rcParams.update(
     }
 )
 
-foo_single = bump
-assert foo_single(0.5, 0.5) < 1e-17
 exact = bump.integrate()
-
-
-def foo_tile(x, y):
-    ret = np.zeros_like(x)
-    for x_0 in [-1, 0, 1, 2]:
-        for y_0 in [-1, 0, 1, 2]:
-            ret += foo_single(x - x_0, y - y_0)
-    return ret
-
-
-def foo(
-    x: np.ndarray[float], y: np.ndarray[float], x0: float = 0, y0: float = 0
-) -> np.ndarray[float]:
-    return foo_tile(x - x0, y - y0)
-
-
 X, Y = np.meshgrid(np.linspace(0, 1, sample_density), np.linspace(0, 1, sample_density))
 inner = np.logical_and(X > inner_dist, X < 1 - inner_dist)
 inner = np.logical_and(inner, Y > inner_dist)
 inner = np.logical_and(inner, Y < 1 - inner_dist)
-X = X.flatten()
-Y = Y.flatten()
-inner = inner.flatten()
-
-ErrorStats = namedtuple("ErrorStats", ["min", "max", "median", "average"])
-Result = namedtuple(
-    "Result", ["n", "poly_deg", "stencil_size", "error_stats", "inner_error_stats"]
-)
-
-
-def calculate_error_stats(errors: np.ndarray[float]) -> ErrorStats:
-    errors = np.abs(errors)
-    return ErrorStats(
-        min=np.min(errors),
-        max=np.max(errors),
-        median=np.median(errors),
-        average=np.average(errors),
-    )
 
 
 results = []
@@ -94,44 +94,51 @@ for h_target in (hs_prog := tqdm(h_targets, position=0)):
         deg_prog.set_description(f"{poly_deg=}")
         stencil_size = get_stencil_size(poly_deg)
         qf = LocalQuad(points, rbf, poly_deg, stencil_size)
-        errors = np.zeros_like(X)
-        for index, (x0, y0) in tqdm(
-            enumerate(zip(X, Y)),
-            total=len(X),
-            position=2,
-            leave=False,
-        ):
-            fs = foo(*points.T, x0=x0, y0=y0)
-            approx = qf.weights @ fs
-            error = (approx - exact) / exact
-            errors[index] = error
+        covering = covering_dist(qf, X, Y)
+        errors = np.abs(
+            quad_test(
+                qf,
+                bump,
+                X,
+                Y,
+                verbose=True,
+                tqdm_kwargs={"leave": False, "position": 2},
+            )
+        )
         result = Result(
             n=n,
             poly_deg=poly_deg,
             stencil_size=stencil_size,
-            error_stats=calculate_error_stats(errors),
-            inner_error_stats=calculate_error_stats(errors[inner]),
+            covering_stats=summary_stats(covering),
+            inner_covering_stats=summary_stats(covering[inner]),
+            error_stats=summary_stats(errors),
+            inner_error_stats=summary_stats(errors[inner]),
         )
         results.append(result)
-        hs_prog.set_description(f"{n=}, error={result.error_stats.max:.3E}")
+        hs_prog.set_description(
+            f"{n=}, h={result.covering_stats.max:.3E}, error={result.error_stats.max:.3E}"
+        )
 
 
-HexConvergenceData = namedtuple("HexConvergenceData", [
+HexConvergenceData = namedtuple(
+    "HexConvergenceData",
+    [
         "bump_order",
         "bump_radius",
         "inner_distance",
         "sample_density",
         "rbf",
         "results",
-])
+    ],
+)
 
 data = HexConvergenceData(
-        bump_order=bump_order,
-        bump_radius=bump_radius,
-        inner_distance=inner_dist,
-        sample_density=sample_density,
-        rbf=rbf,
-        results=results,
+    bump_order=bump_order,
+    bump_radius=bump_radius,
+    inner_distance=inner_dist,
+    sample_density=sample_density,
+    rbf=rbf,
+    results=results,
 )
 
 with open(DATA_FILE, "wb") as f:
@@ -157,7 +164,8 @@ for err_str, err_func in [
     plt.figure(err_str)
     for poly_deg, color in zip(poly_degs, TABLEAU_COLORS.keys()):
         my_res = [result for result in results if result.poly_deg == poly_deg]
-        hs = [1/sqrt(result.n) for result in my_res]
+        # hs = [result.covering_stats.average for result in my_res]
+        hs = [result.n**-2 for result in my_res]
         errs = list(map(err_func, my_res))
         fit = linregress(np.log(hs), np.log(errs))
         plt.loglog(hs, errs, ".", color=color)
@@ -170,5 +178,5 @@ for err_str, err_func in [
         )
     plt.legend()
     plt.ylabel(err_str)
-    plt.xlabel("$N^{-1/2}$")
+    plt.xlabel("$h_{max}$")
     plt.savefig("media/hex_convergence_" + err_str + ".png")

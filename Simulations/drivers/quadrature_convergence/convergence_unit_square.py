@@ -1,9 +1,5 @@
-"""
-Run convergence Tests for number of points
-"""
 from collections import namedtuple
 import matplotlib.pyplot as plt
-from math import ceil
 import numpy as np
 import numpy.linalg as la
 from rbf.geometry import circumradius, delaunay_covering_radius_stats, triangle

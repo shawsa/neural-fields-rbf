@@ -6,28 +6,14 @@ import matplotlib.gridspec as gs
 import numpy as np
 from rbf.quadrature import LocalQuad
 from rbf.rbf import PHS
-from tqdm import tqdm
-from utils import Gaussian, HermiteBump, random_points, hex_grid, cartesian_grid
-
-
-FILE_PREFIX = "media/"
-
-rbf = PHS(3)
-poly_deg = 3
-stencil_size = 21
-n = 4_000
-
-sample_density = 801
-
-# points
-points, point_set = random_points(n, verbose=True), "random"
-# points, point_set = cartesian_grid(n), "cartesian"
-# points, point_set = hex_grid(n), "hex"
-
-# test function
-radius = 0.1
-bump, test_func = Gaussian(radius / 2), "gauss"
-bump, test_func = HermiteBump(order=3, radius=radius), "hermite"
+from utils import (
+    Gaussian,
+    HermiteBump,
+    random_points,
+    hex_grid,
+    PeriodicTile,
+    quad_test,
+)
 
 plt.rcParams.update(
     {
@@ -36,90 +22,89 @@ plt.rcParams.update(
     }
 )
 
-foo_single = bump
-assert foo_single(0.5, 0.5) < 1e-17
-exact = bump.integrate()
 
+FILE_PREFIX = "media/mesh_test_"
+SAVE_FIGURES = False
 
-def foo_tile(x, y):
-    ret = np.zeros_like(x)
-    for x_0 in [-1, 0, 1, 2]:
-        for y_0 in [-1, 0, 1, 2]:
-            ret += foo_single(x - x_0, y - y_0)
-    return ret
+rbf = PHS(3)
+poly_deg = 3
+stencil_size = 21
+n = 2_000
 
-
-def foo(
-    x: np.ndarray[float], y: np.ndarray[float], x0: float = 0, y0: float = 0
-) -> np.ndarray[float]:
-    return foo_tile(x - x0, y - y0)
-
-
-qf = LocalQuad(points, rbf, poly_deg, stencil_size)
+sample_density = 401
+bump_radius = 0.1
 
 X, Y = np.meshgrid(np.linspace(0, 1, sample_density), np.linspace(0, 1, sample_density))
-Z = np.zeros_like(X).flatten()
-for index, (x0, y0) in tqdm(
-    enumerate(zip(X.ravel(), Y.ravel())), total=sample_density**2
-):
-    fs = foo(*points.T, x0=x0, y0=y0)
-    approx = qf.weights @ fs
-    error = (approx - exact) / exact
-    Z[index] = error
-Z = Z.reshape(X.shape)
+for point_set, point_generator in [
+    ("random", lambda n: random_points(n, verbose=True)),
+    ("hex", hex_grid),
+]:
+    print("Generating points and QF")
+    print(f"{point_set=}")
+    points = point_generator(n)
+    qf = LocalQuad(points, rbf, poly_deg, stencil_size)
+    for test_func, bump in [
+        ("gauss", PeriodicTile(Gaussian(bump_radius / 2))),
+        ("hermite", PeriodicTile(HermiteBump(order=3, radius=bump_radius))),
+    ]:
+        print(f"{test_func=}")
+        Z = quad_test(qf=qf, func=bump, X=X, Y=Y, verbose=True)
+        grid = gs.GridSpec(2, 2)
+        fig = plt.figure("_".join([point_set, test_func]), figsize=(8, 8))
 
-grid = gs.GridSpec(2, 2)
-fig = plt.figure(figsize=(8, 8))
+        plt.suptitle(f"{point_set=}, {test_func=}")
+        ax_error = fig.add_subplot(grid[0])
+        error_plot = ax_error.pcolormesh(X, Y, Z, cmap="jet")
+        ax_error.plot(*points.T, "k.", markersize=0.5)
+        ax_error.triplot(*points.T, qf.mesh.simplices, linewidth=0.2)
+        ax_error.set_xlim(0, 1)
+        ax_error.set_ylim(0, 1)
+        error_color = plt.colorbar(error_plot, ax=ax_error)
+        ax_error.axis("equal")
+        ax_error.set_title(
+            "Quadrature Error for\ntest function centered at $(x_0, y_0)$"
+        )
+        ax_error.set_xlabel("$x_0$")
+        ax_error.set_ylabel("$y_0$")
+        error_color.set_label("Relative Error")
 
-ax_error = fig.add_subplot(grid[0])
-error_plot = ax_error.pcolormesh(X, Y, Z, cmap="jet")
-ax_error.plot(*points.T, "k.", markersize=0.5)
-ax_error.triplot(*points.T, qf.mesh.simplices, linewidth=0.2)
-ax_error.set_xlim(0, 1)
-ax_error.set_ylim(0, 1)
-error_color = plt.colorbar(error_plot, ax=ax_error)
-ax_error.axis("equal")
-ax_error.set_title("Quadrature Error for\ntest function centered at $(x_0, y_0)$")
-ax_error.set_xlabel("$x_0$")
-ax_error.set_ylabel("$y_0$")
-error_color.set_label("Relative Error")
+        ax_log_error = fig.add_subplot(grid[1])
+        log_error_plot = ax_log_error.pcolormesh(X, Y, np.log10(np.abs(Z)), cmap="jet")
+        ax_log_error.set_xlim(0, 1)
+        ax_log_error.set_ylim(0, 1)
+        log_error_color = plt.colorbar(log_error_plot, ax=ax_log_error)
+        ax_log_error.axis("equal")
+        ax_log_error.set_title("Log Error")
+        ax_log_error.set_xlabel("$x_0$")
+        ax_log_error.set_ylabel("$y_0$")
+        log_error_color.set_label("Log10 Relative Error")
 
-ax_log_error = fig.add_subplot(grid[1])
-log_error_plot = ax_log_error.pcolormesh(X, Y, np.log10(np.abs(Z)), cmap="jet")
-ax_log_error.set_xlim(0, 1)
-ax_log_error.set_ylim(0, 1)
-log_error_color = plt.colorbar(log_error_plot, ax=ax_log_error)
-ax_log_error.axis("equal")
-ax_log_error.set_title("Log Error")
-ax_log_error.set_xlabel("$x_0$")
-ax_log_error.set_ylabel("$y_0$")
-log_error_color.set_label("Log10 Relative Error")
+        ax_weights = fig.add_subplot(grid[2])
+        neg_mask = qf.weights < 0
+        neg_style = {
+            "marker": ".",
+            "linestyle": "",
+            "markerfacecolor": "w",
+            "markeredgecolor": "k",
+        }
+        ax_weights.plot(*points[neg_mask].T, **neg_style, zorder=-20)
+        weight_color = ax_weights.scatter(
+            *points.T, c=qf.weights, cmap="jet", s=1, zorder=20
+        )
+        weight_color_bar = plt.colorbar(weight_color, ax=ax_weights)
+        ax_weights.axis("equal")
+        ax_weights.set_title("Weights")
+        ax_weights.set_xlabel("$x$")
+        ax_weights.set_ylabel("$y$")
+        weight_color_bar.set_label("Weight")
 
-ax_weights = fig.add_subplot(grid[2])
-neg_mask = qf.weights < 0
-neg_style = {
-    "marker": ".",
-    "linestyle": "",
-    "markerfacecolor": "w",
-    "markeredgecolor": "k",
-}
-ax_weights.plot(*points[neg_mask].T, **neg_style, zorder=-20)
-weight_color = ax_weights.scatter(*points.T, c=qf.weights, cmap="jet", s=1, zorder=20)
-weight_color_bar = plt.colorbar(weight_color, ax=ax_weights)
-ax_weights.axis("equal")
-ax_weights.set_title("Weights")
-ax_weights.set_xlabel("$x$")
-ax_weights.set_ylabel("$y$")
-weight_color_bar.set_label("Weight")
+        ax_hist = fig.add_subplot(grid[3])
+        ax_hist.hist(qf.weights, bins=25)
+        ax_hist.set_title("Histogram of Weights")
+        ax_hist.set_xlabel("weights")
 
-ax_hist = fig.add_subplot(grid[3])
-ax_hist.hist(qf.weights, bins=25)
-ax_hist.set_title("Histogram of Weights")
-ax_hist.set_xlabel("weights")
+        grid.tight_layout(fig)
+        plt.show()
 
-
-grid.tight_layout(fig)
-
-plt.savefig(
-    FILE_PREFIX + point_set + "_" + test_func + "_spatial_analysis.png", dpi=300
-)
+        if SAVE_FIGURES:
+            plt.savefig(FILE_PREFIX + point_set + "_" + test_func, dpi=300)

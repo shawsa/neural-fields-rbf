@@ -1,9 +1,12 @@
-from math import ceil, sqrt
+from abc import ABC, abstractmethod
+from math import ceil, floor, sqrt
 import numpy as np
 from numpy.polynomial import Polynomial as nppoly
 import pickle
-import sympy as sym
 from rbf.points import UnitSquare
+from rbf.quadrature import LocalQuad
+import sympy as sym
+from tqdm import tqdm
 
 CART_STENCILS = "data/cartesian_stencil_sizes.pickle"
 with open(CART_STENCILS, "rb") as f:
@@ -13,7 +16,17 @@ with open(HEX_STENCILS, "rb") as f:
     hex_sizes = pickle.load(f)
 
 
-class HermiteBump:
+class TestFunction(ABC):
+    @abstractmethod
+    def __call__(self, x: np.ndarray[float], y: np.ndarray[float]) -> np.ndarray[float]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def integrate(self):
+        raise NotImplementedError
+
+
+class HermiteBump(TestFunction):
     def __init__(
         self,
         *,
@@ -69,7 +82,7 @@ class HermiteBump:
         )
 
 
-class Gaussian:
+class Gaussian(TestFunction):
     def __init__(
         self,
         standard_deviation: float,
@@ -90,6 +103,59 @@ class Gaussian:
         return 4 * float(sym.integrate(sym.integrate(self.sym, (x, 0, 1)), (y, 0, 1)))
 
 
+class PeriodicTile(TestFunction):
+    def __init__(self, func: TestFunction):
+        assert func(0.5, 0.5) < 1e-17
+        self.func = func
+
+    def __call__(self, x: np.ndarray[float], y: np.ndarray[float]) -> np.ndarray[float]:
+        ret = np.zeros_like(x)
+        for x_0 in [-1, 0, 1, 2]:
+            for y_0 in [-1, 0, 1, 2]:
+                ret += self.func(x - x_0, y - y_0)
+        return ret
+
+    def integrate(self):
+        return self.func.integrate()
+
+
+def quad_test(
+    qf: LocalQuad,
+    func: PeriodicTile,
+    X: np.ndarray[float],
+    Y: np.ndarray[float],
+    verbose=False,
+    tqdm_kwargs={},
+) -> np.ndarray[float]:
+    exact = func.integrate()
+    Z = np.zeros_like(X).flatten()
+    if verbose:
+        def wrapper(x, **kwargs):
+            return tqdm(x, **kwargs, **tqdm_kwargs)
+    else:
+
+        def wrapper(x, **_):
+            return x
+
+    for index, (x0, y0) in wrapper(enumerate(zip(X.ravel(), Y.ravel())), total=len(Z)):
+        fs = func(qf.points[:, 0] - x0, qf.points[:, 1] - y0)
+        approx = qf.weights @ fs
+        error = (approx - exact) / exact
+        Z[index] = error
+    Z = Z.reshape(X.shape)
+    return Z
+
+
+def covering_dist(
+    qf: LocalQuad,
+    X: np.ndarray[float],
+    Y: np.ndarray[float],
+    workers=1,
+) -> np.ndarray[float]:
+    points = np.array([X.ravel(), Y.ravel()]).T
+    return qf.kdt.query(points, workers=workers)[0].reshape(X.shape)
+
+
 def cartesian_grid(n: int):
     """Return a cartesian grid with approximately n points."""
     n_sqrt = int(np.ceil(np.sqrt(n)))
@@ -99,7 +165,7 @@ def cartesian_grid(n: int):
 
 
 def hex_grid(N: int):
-    N_inner_approx = N - int(ceil(sqrt(N) * sqrt(3))) * 4
+    N_inner_approx = N - ceil(sqrt(N) * (1 + sqrt(3)) / 2) * 4
     A, B, C = 2 * sqrt(3), -(1 + sqrt(3)), 1 - N_inner_approx
     ny_approx = (-B + sqrt(B**2 - 4 * A * C)) / (2 * A)
     ny = int(ceil(ny_approx))
@@ -134,22 +200,6 @@ def hex_grid(N: int):
     points[4 * n_side :] = inner_points
 
     return points
-
-
-# def hex_grid(n: int):
-#     """Return a hexagonal grid with approximately n points."""
-#     n_x = int(np.ceil(np.sqrt(n / np.sqrt(3))))
-#     n_y = int(np.ceil(n_x * np.sqrt(3) / 2))
-#     h_x = 1 / (n_x - 1) / 2
-#     h_y = 1 / (n_y - 1) / 2
-#     X, Y = np.meshgrid(np.linspace(0, 1, n_x), np.linspace(0, 1, n_y))
-#     X_inner, Y_inner = np.meshgrid(
-#         np.linspace(h_x, 1 - h_x, n_x - 1), np.linspace(h_y, 1 - h_y, n_y - 1)
-#     )
-#     X = np.append(X, X_inner)
-#     Y = np.append(Y, Y_inner)
-#     points = np.array([X.flatten(), Y.flatten()]).T
-#     return points
 
 
 def random_points(n: int, verbose=False):
@@ -212,7 +262,7 @@ if __name__ == "__main__":
     plt.legend()
     plt.ylim(-0.1, 1.1)
 
-    points = better_hex(4_000)
+    points = hex_grid(4_000)
     plt.plot(*points.T, "k.")
     plt.axis("equal")
     print(np.max(points, axis=0))
