@@ -13,8 +13,8 @@ from utils import (
     hex_grid,
     PeriodicTile,
     quad_test,
+    hex_stencil_min,
 )
-from tqdm import tqdm
 
 
 plt.rcParams.update(
@@ -30,7 +30,7 @@ SAVE_FIGURES = False
 
 rbf = PHS(3)
 poly_deg = 3
-stencil_size = 21
+stencil_size = hex_stencil_min(21)
 n = 2_000
 
 sample_density = 401
@@ -106,6 +106,7 @@ for point_set, point_generator in [
         ax_hist.set_xlabel("weights")
 
         grid.tight_layout(fig)
+        plt.pause(1e-3)
         plt.show()
 
         if SAVE_FIGURES:

@@ -130,8 +130,10 @@ def quad_test(
     exact = func.integrate()
     Z = np.zeros_like(X).flatten()
     if verbose:
+
         def wrapper(x, **kwargs):
             return tqdm(x, **kwargs, **tqdm_kwargs)
+
     else:
 
         def wrapper(x, **_):
@@ -231,6 +233,15 @@ def hex_stencil_min(k_min: int) -> int:
     for which a hex grid has unambiguous stencils.
     """
     return _smallest_greater_than(k_min, hex_sizes)
+
+
+def poly_stencil_min(deg: int) -> int:
+    """
+    Returns the number of polynomial basis terms in 2D.
+    The stencil size must be at least this big for the interpolation matrix
+    to be unisolvent in theory.
+    """
+    return ((deg + 1) * (deg + 2)) // 2
 
 
 if __name__ == "__main__":

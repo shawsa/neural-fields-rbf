@@ -6,6 +6,7 @@ from rbf.quad_lib import get_right_triangle_integral_function
 from rbf.rbf import RBF
 from rbf.stencil import Stencil
 from scipy.spatial import Delaunay, KDTree
+from tqdm import tqdm
 
 
 class QuadStencil(Stencil):
@@ -18,12 +19,6 @@ class QuadStencil(Stencil):
         right_triangle_integrate = get_right_triangle_integral_function(rbf)
         mat = self.interpolation_matrix(rbf, poly_deg)
         rhs = np.zeros_like(mat[0])
-        # rhs[: len(self.points)] = np.array(
-        #     [
-        #         self.scaled_element.rbf_quad(point, right_triangle_integrate)
-        #         for point in self.scaled_points
-        #     ]
-        # )
         rhs[: len(self.points)] = self.scaled_element.rbf_quad(
             self.scaled_points, right_triangle_integrate
         )
@@ -48,12 +43,20 @@ class LocalQuadStencil(QuadStencil):
 
 class LocalQuad:
     def __init__(
-        self, points: np.ndarray[float], rbf: RBF, poly_deg: int, stencil_size: int
+        self,
+        points: np.ndarray[float],
+        rbf: RBF,
+        poly_deg: int,
+        stencil_size: int,
+        verbose=False,
+        tqdm_kwargs={},
     ):
         self.points = points
         self.rbf = rbf
         self.poly_deg = poly_deg
         self.stencil_size = stencil_size
+        self.verbose = verbose
+        self.tqdm_kwargs = tqdm_kwargs
         self.kdt = KDTree(self.points)
         self.initialize_mesh()
         self.initialize_stencils()
@@ -80,8 +83,12 @@ class LocalQuad:
             )
 
     def generate_weights(self):
+        if self.verbose:
+            wrapper = lambda gen: tqdm(gen, **self.tqdm_kwargs)
+        else:
+            wrapper = lambda gen: gen
         self.weights = np.zeros(len(self.points))
-        for stencil in self.stencils:
+        for stencil in wrapper(self.stencils):
             self.weights[stencil.mesh_indices] += stencil.weights(
                 self.rbf, self.poly_deg
             )
