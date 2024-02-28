@@ -8,6 +8,9 @@ from rbf.stencil import Stencil
 from scipy.spatial import Delaunay, KDTree
 from tqdm import tqdm
 
+from multiprocessing import Pool
+from functools import partial
+
 
 class QuadStencil(Stencil):
     def __init__(self, points: np.ndarray[float], element: Triangle):
@@ -59,7 +62,6 @@ class LocalQuad:
         self.tqdm_kwargs = tqdm_kwargs
         self.kdt = KDTree(self.points)
         self.initialize_mesh()
-        self.initialize_stencils()
         self.generate_weights()
 
     def initialize_mesh(self):
@@ -67,28 +69,24 @@ class LocalQuad:
 
     @property
     def elements(self):
-        for tri_indices in self.mesh.simplices:
-            yield triangle(self.mesh.points[tri_indices])
-
-    def initialize_stencils(self):
-        self.stencils = []
-        for element in self.elements:
-            _, neighbor_indices = self.kdt.query(element.centroid, self.stencil_size)
-            self.stencils.append(
-                LocalQuadStencil(
-                    self.points[neighbor_indices],
-                    element,
-                    neighbor_indices,
-                )
-            )
+        return list(map(triangle, self.mesh.points[self.mesh.simplices]))
 
     def generate_weights(self):
+        self.stencils = []
+        self.weights = np.zeros(len(self.points))
         if self.verbose:
             wrapper = lambda gen: tqdm(gen, **self.tqdm_kwargs)
         else:
             wrapper = lambda gen: gen
-        self.weights = np.zeros(len(self.points))
-        for stencil in wrapper(self.stencils):
+
+        for element in wrapper(self.elements):
+            _, neighbor_indices = self.kdt.query(element.centroid, self.stencil_size)
+            stencil = LocalQuadStencil(
+                self.points[neighbor_indices],
+                element,
+                neighbor_indices,
+            )
+            self.stencils.append(stencil)
             self.weights[stencil.mesh_indices] += stencil.weights(
                 self.rbf, self.poly_deg
             )
