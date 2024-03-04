@@ -24,10 +24,10 @@ class GaussianRepulsionKernel(RepulsionKernel):
 
     def __call__(self, points: np.ndarray):
         ret = points.copy()
-        mags = la.norm(ret, axis=1)
+        mags = la.norm(ret, axis=-1)
         mags = self.height * np.exp(-((mags / self.shape) ** 2)) / mags
-        ret[:, 0] *= mags
-        ret[:, 1] *= mags
+        ret[..., 0] *= mags
+        ret[..., 1] *= mags
         return ret
 
 
@@ -37,9 +37,9 @@ class ConstRepulsionKernel(RepulsionKernel):
 
     def __call__(self, points: np.ndarray):
         ret = points.copy()
-        mags = la.norm(ret, axis=1)
-        ret[:, 0] /= mags
-        ret[:, 1] /= mags
+        mags = la.norm(ret, axis=-1)
+        ret[..., 0] /= mags
+        ret[..., 1] /= mags
         return self.const * ret
 
 
@@ -88,18 +88,20 @@ class PointCloud:
         num_neighbors: int,
         force: Callable = None,
         use_ghost: bool = False,
+        repeat=1,
     ):
         points = self.points
         if use_ghost:
             points = self.all_points
         kdt = KDTree(points)
-        update = np.zeros_like(self.inner)
-        for index, point in enumerate(self.inner):
-            _, neighbors_indices = kdt.query(point, num_neighbors + 1)
-            # neighbors = points[[id for id in neighbors_indices if id != index]]
-            neighbors = points[neighbors_indices][1:]
-            # update[index] = sum(kernel(x2 - point) for x2 in neighbors) / len(neighbors)
-            update[index] = np.average(kernel(neighbors - point), axis=0)
+        # update = np.zeros_like(self.inner)
+        # for index, point in enumerate(self.inner):
+        #     _, neighbors_indices = kdt.query(point, num_neighbors + 1)
+        #     neighbors = points[neighbors_indices][1:]
+        #     update[index] = np.average(kernel(neighbors - point), axis=0)
+        _, neighbors_indices = kdt.query(self.inner, num_neighbors + 1)
+        neighbors = points[neighbors_indices][:, 1:]
+        update = np.average(kernel(neighbors - self.inner[:, np.newaxis, :]), axis=1)
         self.inner -= rate * update
         if force is not None:
             self.inner += force(self.inner)

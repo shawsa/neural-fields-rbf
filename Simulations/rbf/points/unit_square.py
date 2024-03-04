@@ -93,16 +93,19 @@ class UnitSquare(PointCloud):
         )
 
         self.const_kernel = ConstRepulsionKernel(self.h / 2)
-        self.repulsion_kernel = GaussianRepulsionKernel(height=1, shape=self.h)
+        self.repulsion_kernel = GaussianRepulsionKernel(height=1, shape=self.h / 2)
 
         if auto_settle:
             self.auto_settle()
 
         if edge_cluster:
-            shift_points = self.inner - 0.5
-            edge_distance = 0.5 - np.max(np.abs(shift_points))
-            factor = (0.5 - edge_distance / 2) / (0.5 - edge_distance)
-            self.inner = shift_points * factor + 0.5
+            self.edge_cluster()
+
+    def edge_cluster(self):
+        shift_points = self.inner - 0.5
+        edge_distance = 0.5 - np.max(np.abs(shift_points))
+        factor = (0.5 - edge_distance / 2) / (0.5 - edge_distance)
+        self.inner = shift_points * factor + 0.5
 
     def force_shape(self, x):
         # return self.h * (1 + np.tanh(-(x - self.h / 2) / self.h**2))
@@ -159,26 +162,21 @@ class UnitSquare(PointCloud):
         if "position" in tqdm_kwargs2:
             tqdm_kwargs2["position"] += 1
         self.jostle(repeat=50, verbose=self.verbose, tqdm_kwargs=self.tqdm_kwargs)
-        self.settle(
-            rate=1, repeat=50, verbose=self.verbose, tqdm_kwargs=tqdm_kwargs2
-        )
+        self.settle(rate=1, repeat=50, verbose=self.verbose, tqdm_kwargs=tqdm_kwargs2)
 
 
 if __name__ == "__main__":
     from scipy.spatial import Delaunay
-    from ..geometry import circumradius, delaunay_covering_radius, triangle
-
-    if False:
-        from rbf.geometry import circumradius, delaunay_covering_radius_stats, triangle
-        from rbf.points.points import (
-            PointCloud,
-            GaussianRepulsionKernel,
-            ConstRepulsionKernel,
-        )
+    from rbf.geometry import circumradius, delaunay_covering_radius_stats, triangle
+    from rbf.points.points import (
+        PointCloud,
+        GaussianRepulsionKernel,
+        ConstRepulsionKernel,
+    )
 
     plt.ion()
-    N = 2_000
-    unit_square = UnitSquare(N, auto_settle=False)
+    N = 10_000
+    unit_square = UnitSquare(N, auto_settle=False, edge_cluster=False)
     # unit_square.auto_settle(verbose=True)
 
     plt.figure("Mesh")
@@ -194,10 +192,19 @@ if __name__ == "__main__":
         plt.pause(1e-3)
 
     # unit_square.settle(rate=1, repeat=20, verbose=True)
-    for _ in tqdm(range(50)):
+    for _ in tqdm(range(25)):
+        unit_square.settle(rate=0.1)
+        scatter.set_data(*unit_square.inner.T)
+        plt.pause(1e-3)
+
+    for _ in tqdm(range(25)):
         unit_square.settle(rate=1)
         scatter.set_data(*unit_square.inner.T)
         plt.pause(1e-3)
+
+    unit_square.edge_cluster()
+    scatter.set_data(*unit_square.inner.T)
+    plt.pause(1e-3)
 
     points = unit_square.points
     mesh = Delaunay(points)
