@@ -38,7 +38,10 @@ class UnitSquare(PointCloud):
         auto_settle: bool = True,
         edge_cluster: bool = True,
         verbose: bool = False,
+        tqdm_kwargs={},
     ):
+        self.verbose = verbose
+        self.tqdm_kwargs = tqdm_kwargs
         self.N = N
         self.h = hex_limit_covering_radius(N)
         self.n = ceil(1 / self.h)
@@ -93,12 +96,12 @@ class UnitSquare(PointCloud):
         self.repulsion_kernel = GaussianRepulsionKernel(height=1, shape=self.h)
 
         if auto_settle:
-            self.auto_settle(verbose=verbose)
+            self.auto_settle()
 
         if edge_cluster:
             shift_points = self.inner - 0.5
             edge_distance = 0.5 - np.max(np.abs(shift_points))
-            factor = (.5 - edge_distance / 2) / (.5 - edge_distance)
+            factor = (0.5 - edge_distance / 2) / (0.5 - edge_distance)
             self.inner = shift_points * factor + 0.5
 
     def force_shape(self, x):
@@ -115,11 +118,18 @@ class UnitSquare(PointCloud):
         force[:, 1] = self.force_shape(y) - self.force_shape(1 - y)
         return force
 
-    def settle(self, rate: float, repeat: int = 1, verbose: bool = False):
+    def settle(
+        self,
+        rate: float,
+        repeat: int = 1,
+        verbose: bool = False,
+        tqdm_kwargs={},
+    ):
         num_neighbors = 19
         my_iter = range(repeat)
         if verbose:
-            my_iter = tqdm(my_iter)
+            my_iter = tqdm(my_iter, **tqdm_kwargs)
+            my_iter.set_description("Settling {self.N} points")
         for _ in my_iter:
             super().settle(
                 kernel=self.repulsion_kernel,
@@ -129,11 +139,12 @@ class UnitSquare(PointCloud):
                 use_ghost=True,
             )
 
-    def jostle(self, repeat: int = 1, verbose: bool = False):
+    def jostle(self, repeat: int = 1, verbose: bool = False, tqdm_kwargs={}):
         num_neighbors = 3
         my_iter = range(repeat)
         if verbose:
-            my_iter = tqdm(my_iter)
+            my_iter = tqdm(my_iter, **tqdm_kwargs)
+            my_iter.set_description(f"Jiggling {self.N} points")
         for _ in my_iter:
             super().settle(
                 kernel=self.const_kernel,
@@ -143,9 +154,14 @@ class UnitSquare(PointCloud):
                 use_ghost=True,
             )
 
-    def auto_settle(self, verbose=False):
-        self.jostle(repeat=50, verbose=verbose)
-        self.settle(rate=1, repeat=50, verbose=verbose)
+    def auto_settle(self):
+        tqdm_kwargs2 = {**self.tqdm_kwargs}
+        if "position" in tqdm_kwargs2:
+            tqdm_kwargs2["position"] += 1
+        self.jostle(repeat=50, verbose=self.verbose, tqdm_kwargs=self.tqdm_kwargs)
+        self.settle(
+            rate=1, repeat=50, verbose=self.verbose, tqdm_kwargs=tqdm_kwargs2
+        )
 
 
 if __name__ == "__main__":

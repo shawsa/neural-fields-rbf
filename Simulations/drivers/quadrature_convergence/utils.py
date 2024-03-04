@@ -204,7 +204,7 @@ def hex_grid(N: int):
     return points
 
 
-def random_points(n: int, verbose=False):
+def random_points(n: int, verbose=False, tqdm_kwargs={}):
     """
     Return an set of roughly equally distributed points in [0, 1]^2.
     Uses rbf.points.unit_square.UnitSquare.

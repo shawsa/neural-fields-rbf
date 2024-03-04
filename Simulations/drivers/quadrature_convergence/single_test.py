@@ -1,9 +1,8 @@
 """
 Run convergence Tests for number of points
 """
-from collections import namedtuple
 from dataclasses import dataclass
-from math import ceil, sqrt
+from math import ceil
 from matplotlib.colors import TABLEAU_COLORS
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,9 +27,9 @@ FILE_PREFIX = "media/single_test_"
 
 
 rbf = PHS(3)
-poly_degs = range(1, 6)
+poly_degs = range(1, 4)
 stencil_size_factor = 2
-h_targets = np.logspace(-4, -7, 11, base=2)
+h_targets = np.logspace(-4, -5, 11, base=2)
 
 bump_order = 4
 bump_radius = 0.1
@@ -42,7 +41,9 @@ func_name = "hermite_order4"
 SAVE = False
 PLOT_WHILE_RUNNING = True
 
-get_points, point_set, repeats = (random_points, "min_energy_", 10)
+repeats = 5
+
+# get_points, point_set, repeats = (random_points, "min_energy_", 10)
 # get_points, point_set, repeats = (hex_grid, "hex_", 1)
 
 covering_sample_density = 801
@@ -104,12 +105,16 @@ if PLOT_WHILE_RUNNING:
     plt.legend()
     plt.ylabel("Relative Error")
     plt.xlabel("$h_{max}$")
-for h_target in (hs_prog := tqdm(h_targets[::-1], position=0)):
-    for _ in tqdm(range(repeats), leave=False, position=1):
-        points = get_points(hex_limit_density(h_target))
+for _ in tqdm(range(repeats), leave=False, position=0, unit="trial"):
+    for h_target in (hs_prog := tqdm(h_targets[::-1], position=1)):
+        points = random_points(
+            hex_limit_density(h_target),
+            verbose=True,
+            tqdm_kwargs={"leave": False, "position": 2},
+        )
         n = len(points)
         hs_prog.set_description(f"{n=}")
-        for poly_deg in (deg_prog := tqdm(poly_degs[::-1], leave=False, position=2)):
+        for poly_deg in (deg_prog := tqdm(poly_degs[::-1], leave=False, position=4)):
             stencil_size = get_stencil_size(poly_deg)
             deg_prog.set_description(f"{poly_deg=}, k={stencil_size}")
             qf = LocalQuad(
@@ -119,7 +124,7 @@ for h_target in (hs_prog := tqdm(h_targets[::-1], position=0)):
                 stencil_size,
                 verbose=True,
                 tqdm_kwargs={
-                    "position": 3,
+                    "position": 5,
                     "leave": False,
                 },
             )
@@ -144,20 +149,21 @@ for h_target in (hs_prog := tqdm(h_targets[::-1], position=0)):
             hs_prog.set_description(
                 f"{n=}, h={result.covering_stats.max:.3E}, error={result.error_stats.max:.3E}"
             )
-            plt.plot(
-                result.covering_stats.max,
-                result.error_stats.max,
-                ".",
-                color=colors[poly_deg],
-            )
-            plt.pause(1e-3)
+            if PLOT_WHILE_RUNNING:
+                plt.plot(
+                    result.covering_stats.max,
+                    result.error_stats.max,
+                    ".",
+                    color=colors[poly_deg],
+                )
+                plt.pause(1e-3)
 
 
 plt.figure()
 for poly_deg in poly_degs:
     color = colors[poly_deg]
     my_res = [result for result in results if result.poly_deg == poly_deg]
-    hs = [result.n**-.5 for result in my_res]
+    hs = [result.n**-0.5 for result in my_res]
     # hs = [result.covering_stats.max for result in my_res]
     # hs = [result.covering_stats.average for result in my_res]
     errs = [result.error_stats.max for result in my_res]
@@ -175,4 +181,4 @@ plt.ylabel("Relative Error")
 # plt.xlabel("$h_{ave}$")
 plt.xlabel("$N^{-1/2}$")
 if SAVE:
-    plt.savefig(FILE_PREFIX + point_set + func_name + ".png")
+    plt.savefig(FILE_PREFIX + func_name + ".png")
