@@ -36,7 +36,7 @@ test_functions = [
 ]
 exact_values = [
     float(sym.integrate(sym.integrate(sym_func, (x, 0, 1)), (y, 0, 1)))
-    for sym_func in test_functions
+    for sym_func, _ in test_functions
 ]
 
 
