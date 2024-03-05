@@ -158,11 +158,10 @@ class UnitSquare(PointCloud):
             )
 
     def auto_settle(self):
-        tqdm_kwargs2 = {**self.tqdm_kwargs}
-        if "position" in tqdm_kwargs2:
-            tqdm_kwargs2["position"] += 1
         self.jostle(repeat=50, verbose=self.verbose, tqdm_kwargs=self.tqdm_kwargs)
-        self.settle(rate=1, repeat=50, verbose=self.verbose, tqdm_kwargs=tqdm_kwargs2)
+        self.settle(
+            rate=1, repeat=50, verbose=self.verbose, tqdm_kwargs=self.tqdm_kwargs
+        )
 
 
 if __name__ == "__main__":
