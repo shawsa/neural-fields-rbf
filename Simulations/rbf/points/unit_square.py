@@ -132,7 +132,7 @@ class UnitSquare(PointCloud):
         my_iter = range(repeat)
         if verbose:
             my_iter = tqdm(my_iter, **tqdm_kwargs)
-            my_iter.set_description("Settling {self.N} points")
+            my_iter.set_description(f"Settling {self.N} points")
         for _ in my_iter:
             super().settle(
                 kernel=self.repulsion_kernel,
