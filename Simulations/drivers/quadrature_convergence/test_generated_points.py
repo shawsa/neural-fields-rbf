@@ -26,14 +26,23 @@ x, y = sym.symbols("x y", real=True)
 a1, a2 = 1, 1
 b1, b2 = sym.Rational(1, 2), sym.Rational(1, 2)
 
+
+def cheb7(x):
+    return 64*x**7 - 112*x**5 + 56*x**3 - 7*x
+
+
 test_functions = [
     sym.sin(10 * x) * sym.sin(10 * y) + 1,
     sym.cos(10 * x) * sym.cos(7 * y) + 1,
+    sym.cos(10 * x) * sym.sin(10 * y) + 1,
+    sym.sin(10 * x) * sym.cos(7 * y) + 1,
+    cheb7(2*x - 1) * cheb7(2*y - 1) + 1,
     sym.cos(2 * sym.pi * b1 + a1 * x + a2 * y),  # Genz 1
     1 / (a1**-2 + (x - b1) ** 2) / (a2**-2 + (y - b2) ** 2),  # Genz 2
     (1 + a1 * x + a2 * y) ** -3,  # Genz 3
     # sym.exp(-(a1**2) * (x - b1) ** 2 - a2**2 * (y - b2) ** 2),  # Genz 4
 ]
+
 exact_values = [
     float(sym.integrate(sym.integrate(sym_func, (x, 0, 1)), (y, 0, 1)))
     for sym_func in test_functions

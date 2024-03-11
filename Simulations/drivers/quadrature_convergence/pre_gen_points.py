@@ -47,7 +47,7 @@ def pregens():
 
 if __name__ == "__main__":
     rbf = PHS(3)
-    poly_degs = range(1, 4)
+    poly_degs = range(1, 7)
     h_targets = np.logspace(-6, -8, 11, base=2)
     repeats = 5
 
