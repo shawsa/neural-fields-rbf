@@ -1,9 +1,10 @@
-from dataclasses import dataclass
 from itertools import product
+import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as la
 from numpy.fft import fft2, ifft2
 from typing import Callable
+from odeiter import TimeDomain_Start_Stop_MaxSpacing, RK4, TqdmWrapper
 
 
 class SpaceDomain2D:
@@ -49,17 +50,6 @@ class SpaceDomain2D:
                 (x + x_offset - self.X) ** 2 + (y + y_offset - self.Y) ** 2
             )
         return np.min(dist_tensor, axis=0)
-
-
-@dataclass
-class Parameters:
-    mu: float
-    alpha: float
-    gamma: float
-
-    @property
-    def beta(self):
-        return 1 / self.gamma - 1
 
 
 class NeuralField2D:
@@ -125,19 +115,39 @@ class Gaussian:
 
 
 if __name__ == "__main__":
-    x_linspace_params = (-1, 1, 201)
-    y_linspace_params = (-1, 1, 201)
+    width = 100
+    x_linspace_params = (-width / 2, width / 2, 201)
+    y_linspace_params = x_linspace_params
+
+    t0, tf = 0, 50
+    delta_t = 1e-1
+
     space = SpaceDomain2D(*x_linspace_params, *y_linspace_params)
 
-    def firing_rate(u):
-        return 1 / (1 + np.exp(u))
+    g1 = Gaussian(sigma=0.3)
+    g2 = Gaussian(sigma=1.0)
 
     def weight_kernel(r):
-        return np.exp(-r)
+        # return g1.radial(r) - 1.1*g2.radial(r)
+        return np.exp(-r) * (2 - r)
 
     nf = NeuralField2D(
         space=space,
-        firing_rate=firing_rate,
+        firing_rate=Sigmoid(threshold=0.2, gain=20),
         weight_kernel=weight_kernel,
-        params=Parameters(mu=1.0, alpha=20.0, gamma=0.2),
     )
+
+    time = TimeDomain_Start_Stop_MaxSpacing(t0, tf, delta_t)
+    solver = TqdmWrapper(RK4())
+
+    # u0 = np.heaviside(1 - space.dist(0, 0), 0.5)
+    u0 = Gaussian(sigma=1.0).radial(np.sqrt(space.X**2 + space.Y**2))
+
+    mesh = plt.pcolormesh(space.X, space.Y, u0, cmap="jet", vmin=-1, vmax=2)
+    plt.axis("equal")
+    plt.colorbar()
+
+    for u in solver.solution_generator(u0, nf.rhs, time):
+        mesh.set_array(u)
+        plt.draw()
+        plt.pause(1e-3)
