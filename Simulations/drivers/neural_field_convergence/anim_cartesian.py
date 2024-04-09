@@ -55,12 +55,12 @@ class CoombesSchmidtBojakBessel:
         )
 
 
-FILE_NAME = "media/cartesian.gif"
-SAVE_ANIMATION = False
+FILE_NAME = "media/snowflake7_double_res.gif"
+SAVE_ANIMATION = True
 
 # width = 60
 width = 140
-x_linspace_params = (-width / 2, width / 2, 401)
+x_linspace_params = (-width / 2, width / 2, 801)
 y_linspace_params = x_linspace_params
 
 t0, tf = 0, 100
@@ -74,28 +74,28 @@ threshold = 0.115
 
 nf = NeuralField(
     space=space,
-    firing_rate=Heaviside(threshold=threshold),
-    # firing_rate=HermiteBump(threshold=threshold, radius=0.1, order=3),
+    # firing_rate=Heaviside(threshold=threshold),
+    firing_rate=HermiteBump(threshold=threshold, radius=0.1, order=3),
     # firing_rate=Sigmoid(threshold=0.2, gain=20),
-    # weight_kernel=laterally_inhibitory_weight_kernel,
-    weight_kernel=CoombesSchmidtBojakBessel(beta=0.5, gamma=4)
+    weight_kernel=laterally_inhibitory_weight_kernel,
+    # weight_kernel=CoombesSchmidtBojakBessel(beta=0.5, gamma=4)
 )
 
 time = TimeDomain_Start_Stop_MaxSpacing(t0, tf, delta_t)
-# solver = TqdmWrapper(RK4())
-solver = TqdmWrapper(Euler())
+solver = TqdmWrapper(RK4())
+# solver = TqdmWrapper(Euler())
 
 # u0 = Gaussian(sigma=1.0).radial(np.sqrt(space.X**2 + space.Y**2) + .5*np.cos(4*np.arctan2(space.Y, space.X)))
 u0 = np.zeros_like(space.X).flatten()
 for index, (x, y) in enumerate(zip(space.X.ravel(), space.Y.ravel())):
     r = np.sqrt(x**2 + y**2)
     theta = np.arctan2(y, x)
-    if r < 12 + 0.5 * np.cos(4 * theta):
-        u0[index] = 0.3
+    if r < 5 + 2 * np.cos(7 * theta + 0*np.pi/3):
+        u0[index] = 1
 u0 = u0.reshape(space.X.shape)
 
-# mesh = plt.pcolormesh(space.X, space.Y, u0, cmap="jet", vmin=-1, vmax=2)
-mesh = plt.pcolormesh(space.X, space.Y, u0, cmap="jet", vmin=-.14, vmax=.4)
+mesh = plt.pcolormesh(space.X, space.Y, u0, cmap="jet", vmin=-2, vmax=2)
+# mesh = plt.pcolormesh(space.X, space.Y, u0, cmap="jet", vmin=-.14, vmax=.4)
 plt.axis("equal")
 plt.colorbar()
 
