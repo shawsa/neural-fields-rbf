@@ -56,7 +56,7 @@ class CoombesSchmidtBojakBessel:
 
 
 FILE_NAME = "media/snowflake7_double_res.gif"
-SAVE_ANIMATION = True
+SAVE_ANIMATION = False
 
 # width = 60
 width = 140
