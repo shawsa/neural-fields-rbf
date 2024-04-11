@@ -33,19 +33,20 @@ class NullContext:
         pass
 
 
-FILE_NAME = "media/scattered.gif"
-SAVE_ANIMATION = False
+FILE_NAME = "media/scattered_snowflake7.gif"
+SAVE_ANIMATION = True
 
-t0, tf = 0, 50
+t0, tf = 0, 100
 delta_t = 1e-1
-width = 30
+width = 70
 
-N = 16_000
+N = 64_000
 rbf = PHS(3)
 poly_deg = 2
 stencil_size = 21
 
 points = UnitSquare(N, verbose=True).points * width - width / 2
+
 qf = LocalQuad(
     points=points,
     rbf=rbf,
@@ -54,27 +55,30 @@ qf = LocalQuad(
     verbose=True,
 )
 
-
+threshold = 0.115
 nf = NeuralField(
     qf=qf,
-    firing_rate=HermiteBump(threshold=0.1, radius=0.1, order=3),
-    # firing_rate=Sigmoid(threshold=0.1, gain=20),
+    firing_rate=HermiteBump(threshold=threshold, radius=0.1, order=3),
     weight_kernel=laterally_inhibitory_weight_kernel,
-    # weight_kernel=excitatory_weight_kernel,
-    # dist=PeriodicDistance(x_width=width, y_width=width),
     dist=euclidian_dist,
 )
 
 time = TimeDomain_Start_Stop_MaxSpacing(t0, tf, delta_t)
 solver = TqdmWrapper(RK4())
 
-u0 = (
-    Gaussian(sigma=1.0)(points)
-    * (2 + np.cos(np.arctan2(points[:, 1], points[:, 0])))
-)
+# u0 = (
+#     Gaussian(sigma=1.0)(points)
+#     * (2 + np.cos(np.arctan2(points[:, 1], points[:, 0])))
+# )
+u0 = np.zeros_like(qf.points[:, 0])
+for index, (x, y) in enumerate(qf.points):
+    r = np.sqrt(x**2 + y**2)
+    theta = np.arctan2(y, x)
+    if r < 5 + 2 * np.cos(7 * theta + 0*np.pi/3):
+        u0[index] = 1
 
-plt.figure("Solution")
-scatter = plt.scatter(*points.T, c=u0, s=4, cmap="jet", vmin=-0.5, vmax=2.0)
+plt.figure("Solution", figsize=(10, 10))
+scatter = plt.scatter(*points.T, c=u0, s=0.5, cmap="jet", vmin=-2.0, vmax=2.0)
 plt.axis("equal")
 plt.colorbar()
 

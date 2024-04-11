@@ -11,3 +11,5 @@ Manuscript/manuscript.log
 *.out
 Manuscript/manuscript.synctex.gz
 *.thm
+
+*.gif
