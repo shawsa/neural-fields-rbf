@@ -7,6 +7,8 @@ from odeiter import TimeDomain_Start_Stop_MaxSpacing, RK4, TqdmWrapper
 from rbf.quadrature import LocalQuad
 from rbf.rbf import PHS
 from rbf.points import UnitSquare
+from scipy.sparse import csr_array
+from tqdm import tqdm
 
 
 def euclidian_dist(points, x):
@@ -31,23 +33,28 @@ class FlatTorrusDistance:
 class NeuralField:
     def __init__(
         self,
+        verbose_init=True,
+        dist=euclidian_dist,
+        *,
         qf: LocalQuad,
         firing_rate: Callable[[np.ndarray], np.ndarray],
         weight_kernel: Callable[[np.ndarray], np.ndarray],
-        dist=euclidian_dist,
     ):
         self.qf = qf
         self.points = qf.points
         self.firing_rate = firing_rate
         self.weight_kernel = weight_kernel
         self.dist = dist
-        self.initialize_convolution()
+        self.initialize_convolution(verbose=verbose_init)
 
-    def initialize_convolution(self):
+    def initialize_convolution(self, verbose: bool):
         conv_mat = np.zeros((len(self.points), len(self.points)))
-        for index, point in enumerate(self.points):
-            conv_mat[index] = self.qf.weights * np.array(
-                [self.weight_kernel(self.dist(self.points, point))]
+        verbose_wrapper = enumerate(self.points)
+        if verbose:
+            verbose_wrapper = tqdm(verbose_wrapper, total=len(self.points))
+        for index, point in verbose_wrapper:
+            conv_mat[index] = self.qf.weights * self.weight_kernel(
+                self.dist(self.points, point)
             )
         self.conv_mat = conv_mat
 
@@ -56,6 +63,39 @@ class NeuralField:
 
     def rhs(self, t, u):
         return -u + self.conv(self.firing_rate(u))
+
+
+class NeuralFieldSparse(NeuralField):
+    def __init__(
+        self,
+        *,
+        sparcity_tolerance: float = 1e-16,
+        **kwargs,
+    ):
+        self.sparcity_tolerance = sparcity_tolerance
+        super().__init__(**kwargs)
+
+    def initialize_convolution(self, verbose: bool):
+        data = []
+        indices = []
+        indptr = [0]
+        shape = 2 * (len(self.points),)
+        index_arr = np.arange(len(self.points), dtype=int)
+        verbose_wrapper = self.points
+        if verbose:
+            verbose_wrapper = tqdm(verbose_wrapper, total=len(self.points))
+        for point in verbose_wrapper:
+            row = self.qf.weights * self.weight_kernel(self.dist(self.points, point))
+            row_mask = np.abs(row) > self.sparcity_tolerance
+            data += list(row[row_mask])
+            indices += list(index_arr[row_mask])
+            indptr.append(len(data))
+
+        if verbose:
+            print("Constructing Sparse Matrix")
+        self.conv_mat = csr_array((data, indices, indptr), shape=shape)
+        if verbose:
+            print(f"Fill = {100 * self.conv_mat.nnz / len(self.points)**2:.2f}%")
 
 
 if __name__ == "__main__":

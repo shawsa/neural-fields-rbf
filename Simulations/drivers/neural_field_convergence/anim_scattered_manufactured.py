@@ -1,7 +1,7 @@
 from itertools import islice
 import matplotlib.pyplot as plt
 import numpy as np
-from odeiter import TimeDomain_Start_Stop_MaxSpacing, Euler, RK4, TqdmWrapper
+from odeiter import TimeDomain_Start_Stop_MaxSpacing, Euler, AB4, RK4, TqdmWrapper
 
 import imageio.v2 as imageio
 import os
@@ -11,8 +11,11 @@ from rbf.quadrature import LocalQuad
 from rbf.rbf import PHS
 from rbf.points import UnitSquare
 
-from neural_fields.scattered import NeuralField, euclidian_dist, FlatTorrusDistance
-from neural_fields.firing_rate import Sigmoid, HermiteBump
+from neural_fields.scattered import (
+    NeuralField,
+    NeuralFieldSparse,
+    FlatTorrusDistance,
+)
 from neural_fields.kernels import Gaussian
 
 from manufactured import ManufacturedSolution
@@ -35,19 +38,21 @@ class NullContext:
 
 
 FILE_NAME = "media/anim_scattered_manufactured.gif"
-SAVE_ANIMATION = True
+SAVE_ANIMATION = False
 
 width = 50
-t0, tf = 0, 2 * np.pi
-delta_t = 1e-2
+# t0, tf = 0, 2 * np.pi
+t0, tf = 0, np.pi/2
+# delta_t = 5e-3
 # delta_t = 1e-4
+delta_t = 1e-6
 
-threshold = 0.1
-gain = 10
+threshold = 0.5
+gain = 5
 weight_kernel_sd = 1
 sol_sd = 0.5
 path_radius = 10
-epsilon = 0.01
+epsilon = 0.1
 
 sol = ManufacturedSolution(
     weight_kernel_sd=weight_kernel_sd,
@@ -61,8 +66,8 @@ sol = ManufacturedSolution(
 N = 64_000
 # N = 16_000
 rbf = PHS(3)
-poly_deg = 2
-stencil_size = 21
+poly_deg = 4
+stencil_size = 41
 
 points = UnitSquare(N, verbose=True).points * width - width / 2
 
@@ -74,11 +79,13 @@ qf = LocalQuad(
     verbose=True,
 )
 
-nf = NeuralField(
+# nf = NeuralField(
+nf = NeuralFieldSparse(
     qf=qf,
     firing_rate=sol.firing,
     weight_kernel=Gaussian(sigma=weight_kernel_sd).radial,
     dist=FlatTorrusDistance(x_width=width, y_width=width),
+    sparcity_tolerance=1e-16,
 )
 
 
@@ -87,14 +94,15 @@ def rhs(t, u):
 
 
 time = TimeDomain_Start_Stop_MaxSpacing(t0, tf, delta_t)
-solver = TqdmWrapper(RK4())
 # solver = TqdmWrapper(Euler())
+solver = TqdmWrapper(AB4(seed=RK4(), seed_steps_per_step=1))
+# solver = TqdmWrapper(RK4())
 
 u0 = sol.exact(*points.T, 0)
 
 dot_size = 0.5
 
-fig, (ax_sol, ax_err) = plt.subplots(2, 1, figsize=(5, 10))
+fig, (ax_sol, ax_err) = plt.subplots(1, 2, figsize=(15, 7))
 scatter = ax_sol.scatter(
     *points.T,
     c=u0,
@@ -104,25 +112,31 @@ scatter = ax_sol.scatter(
     vmax=np.max(u0),
 )
 plt.colorbar(scatter, ax=ax_sol)
-err = ax_err.scatter(*points.T, c=u0 * 0 - 16, s=dot_size, cmap="jet", vmin=-16, vmax=0)
+err = ax_err.scatter(*points.T, c=u0 * 0 - 16, s=dot_size, cmap="jet", vmin=-10, vmax=0)
 plt.colorbar(err, ax=ax_err)
+
+for ax in (ax_sol, ax_err):
+    ax.set_xlim(np.min(points[:, 0]), np.max(points[:, 0]))
+    ax.set_ylim(np.min(points[:, 1]), np.max(points[:, 1]))
 
 if SAVE_ANIMATION:
     writer = imageio.get_writer(FILE_NAME, mode="I")
 else:
     writer = NullContext()
 
-frames = 100
+frames = len(time.array)//100
 with writer:
     for t, u in islice(
         zip(time.array, solver.solution_generator(u0, rhs, time)),
-        None,
+        1,
         None,
         len(time.array) // frames,
     ):
         scatter.set_array(u)
-        err_arr = np.abs(u - sol.exact(*points.T, t))
+        my_exact = sol.exact(*points.T, t)
+        err_arr = np.abs(u - my_exact)/my_exact
         err_arr[err_arr < 1e-16] = 1e-16
+        print(np.max(err_arr))
         err.set_array(np.log10(err_arr))
         plt.draw()
         plt.pause(1e-3)
