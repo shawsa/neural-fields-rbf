@@ -1,7 +1,9 @@
 from itertools import islice
 import matplotlib.pyplot as plt
 import numpy as np
-from odeiter import TimeDomain_Start_Stop_MaxSpacing, Euler, RK4, TqdmWrapper
+from odeiter import TimeDomain_Start_Stop_MaxSpacing, Euler, RK4
+from odeiter.adams_bashforth import AB5
+from tqdm import tqdm
 
 import imageio.v2 as imageio
 import os
@@ -33,23 +35,28 @@ FILE_NAME = "media/anim_cartesian_manufactured.gif"
 # FILE_NAME = "media/anim_cartesian_manufactured_euler.gif"
 SAVE_ANIMATION = False
 
-width = 50
-# x_linspace_params = (-width / 2, width / 2, 61)
-x_linspace_params = (-width / 2, width / 2, 401)
+
+solver = AB5(seed=RK4(), seed_steps_per_step=2)
+# solver = RK4()
+num_points_per_side = 1601
+# delta_t = 1e-3
+delta_t = 1e-3 / 2
+
+width = 30
+x_linspace_params = (-width / 2, width / 2, num_points_per_side)
 y_linspace_params = x_linspace_params
 
-t0, tf = 0, 2 * np.pi
-# delta_t = 1e-2
-delta_t = 1e-4
+# t0, tf = 0, 2 * np.pi
+t0, tf = 0, 0.1  # 2 * np.pi
+# delta_t = 5e-4
+# delta_t = 1e-4
 
-space = SpaceDomain(*x_linspace_params, *y_linspace_params)
-
-threshold = 0.1
-gain = 10
+threshold = 0.5
+gain = 5
 weight_kernel_sd = 1
 sol_sd = 0.5
-path_radius = 10
-epsilon = 0.01
+path_radius = 5
+epsilon = 0.1
 
 sol = ManufacturedSolution(
     weight_kernel_sd=weight_kernel_sd,
@@ -60,7 +67,7 @@ sol = ManufacturedSolution(
     epsilon=epsilon,
 )
 
-print(np.max(sol.exact(space.X, space.Y, 0)))
+space = SpaceDomain(*x_linspace_params, *y_linspace_params)
 
 nf = NeuralField(
     space=space,
@@ -74,8 +81,8 @@ def rhs(t, u):
 
 
 time = TimeDomain_Start_Stop_MaxSpacing(t0, tf, delta_t)
+# solver = TqdmWrapper(Euler())
 # solver = TqdmWrapper(RK4())
-solver = TqdmWrapper(Euler())
 
 u0 = sol.exact(space.X, space.Y, 0)
 
@@ -99,16 +106,24 @@ if SAVE_ANIMATION:
 else:
     writer = NullContext()
 
-frames = 100
+# frames = len(time.array)//100
+frames = 200
 with writer:
     for t, u in islice(
-        zip(time.array, solver.solution_generator(u0, rhs, time)),
+        zip(
+            time.array,
+            tqdm_obj := tqdm(
+                solver.solution_generator(u0, rhs, time), total=len(time.array)
+            ),
+        ),
         None,
         None,
-        len(time.array) // frames,
+        max(1, len(time.array) // frames),
     ):
         mesh.set_array(u)
-        err_arr = np.abs(u - sol.exact(space.X, space.Y, t))
+        my_sol = sol.exact(space.X, space.Y, t)
+        err_arr = np.abs(u - my_sol) / my_sol
+        tqdm_obj.set_description(f"error={np.max(err_arr):.3E}")
         err_arr[err_arr < 1e-16] = 1e-16
         err.set_array(np.log10(err_arr))
         plt.draw()

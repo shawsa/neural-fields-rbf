@@ -1,7 +1,9 @@
 from itertools import islice
 import matplotlib.pyplot as plt
 import numpy as np
-from odeiter import TimeDomain_Start_Stop_MaxSpacing, Euler, AB4, RK4, TqdmWrapper
+from odeiter import TimeDomain_Start_Stop_MaxSpacing, RK4, TqdmWrapper
+from odeiter.adams_bashforth import AB5
+from tqdm import tqdm
 
 import imageio.v2 as imageio
 import os
@@ -42,10 +44,10 @@ SAVE_ANIMATION = False
 
 width = 50
 # t0, tf = 0, 2 * np.pi
-t0, tf = 0, np.pi/2
+t0, tf = 0, 0.1
 # delta_t = 5e-3
-# delta_t = 1e-4
-delta_t = 1e-6
+delta_t = 1e-4
+# delta_t = 1e-6
 
 threshold = 0.5
 gain = 5
@@ -94,9 +96,8 @@ def rhs(t, u):
 
 
 time = TimeDomain_Start_Stop_MaxSpacing(t0, tf, delta_t)
-# solver = TqdmWrapper(Euler())
-solver = TqdmWrapper(AB4(seed=RK4(), seed_steps_per_step=1))
-# solver = TqdmWrapper(RK4())
+# solver = RK4()
+solver = AB5(seed=RK4(), seed_steps_per_step=2)
 
 u0 = sol.exact(*points.T, 0)
 
@@ -124,19 +125,22 @@ if SAVE_ANIMATION:
 else:
     writer = NullContext()
 
-frames = len(time.array)//100
+frames = len(time.array) // 1
 with writer:
     for t, u in islice(
-        zip(time.array, solver.solution_generator(u0, rhs, time)),
+        zip(
+            time.array,
+            tqdm_obj := tqdm(solver.solution_generator(u0, rhs, time), total=len(time.array)),
+        ),
         1,
         None,
-        len(time.array) // frames,
+        max(1, len(time.array) // frames),
     ):
         scatter.set_array(u)
         my_exact = sol.exact(*points.T, t)
-        err_arr = np.abs(u - my_exact)/my_exact
+        err_arr = np.abs(u - my_exact) / my_exact
+        tqdm_obj.set_description(f"error={np.max(err_arr):.3E}")
         err_arr[err_arr < 1e-16] = 1e-16
-        print(np.max(err_arr))
         err.set_array(np.log10(err_arr))
         plt.draw()
         plt.pause(1e-3)
