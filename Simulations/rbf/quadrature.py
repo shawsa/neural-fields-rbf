@@ -13,6 +13,9 @@ from functools import partial
 
 
 class QuadStencil(Stencil):
+    """An object to store a quadrature stencil for a given Trianglular domain,
+    and to compute the associated weights."""
+
     def __init__(self, points: np.ndarray[float], element: Triangle):
         super(QuadStencil, self).__init__(points, center=element.centroid)
         self.element = element
@@ -37,6 +40,8 @@ class QuadStencil(Stencil):
 
 
 class LocalQuadStencil(QuadStencil):
+    """Similar to QuadStencil, but also keeps track of global collocation indices.
+    Useful for local quadrature."""
     def __init__(
         self, points: np.ndarray[float], element: Triangle, mesh_indices=np.ndarray[int]
     ):
@@ -45,6 +50,8 @@ class LocalQuadStencil(QuadStencil):
 
 
 class LocalQuad:
+    """An object to get quadrature weights by performing local RBF quadrature
+    on a Delaunay triangulation of the quadrature nodes."""
     def __init__(
         self,
         points: np.ndarray[float],
@@ -60,6 +67,7 @@ class LocalQuad:
         self.stencil_size = stencil_size
         self.verbose = verbose
         self.tqdm_kwargs = tqdm_kwargs
+
         self.kdt = KDTree(self.points)
         self.initialize_mesh()
         self.generate_weights()

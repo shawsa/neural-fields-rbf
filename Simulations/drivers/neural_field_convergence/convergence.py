@@ -119,7 +119,7 @@ if __name__ == "__main__":
 
                 results.append(
                     Result(
-                        solver=str(solver),
+                        solver=solver.name,
                         delta_t=delta_t,
                         N=N,
                         rbf=str(rbf),

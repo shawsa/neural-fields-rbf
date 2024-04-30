@@ -33,7 +33,8 @@ class FlatTorrusDistance:
 class NeuralField:
     def __init__(
         self,
-        verbose_init=True,
+        verbose=False,
+        tqdm_kwargs={},
         dist=euclidian_dist,
         *,
         qf: LocalQuad,
@@ -45,13 +46,15 @@ class NeuralField:
         self.firing_rate = firing_rate
         self.weight_kernel = weight_kernel
         self.dist = dist
-        self.initialize_convolution(verbose=verbose_init)
+        self.initialize_convolution(verbose=verbose, tqdm_kwargs=tqdm_kwargs)
 
-    def initialize_convolution(self, verbose: bool):
+    def initialize_convolution(self, verbose: bool, tqdm_kwargs):
         conv_mat = np.zeros((len(self.points), len(self.points)))
         verbose_wrapper = enumerate(self.points)
         if verbose:
-            verbose_wrapper = tqdm(verbose_wrapper, total=len(self.points))
+            verbose_wrapper = tqdm(
+                verbose_wrapper, total=len(self.points), **tqdm_kwargs
+            )
         for index, point in verbose_wrapper:
             conv_mat[index] = self.qf.weights * self.weight_kernel(
                 self.dist(self.points, point)
@@ -75,7 +78,7 @@ class NeuralFieldSparse(NeuralField):
         self.sparcity_tolerance = sparcity_tolerance
         super().__init__(**kwargs)
 
-    def initialize_convolution(self, verbose: bool):
+    def initialize_convolution(self, verbose: bool = False, tqdm_kwargs={}):
         data = []
         indices = []
         indptr = [0]
@@ -83,7 +86,9 @@ class NeuralFieldSparse(NeuralField):
         index_arr = np.arange(len(self.points), dtype=int)
         verbose_wrapper = self.points
         if verbose:
-            verbose_wrapper = tqdm(verbose_wrapper, total=len(self.points))
+            verbose_wrapper = tqdm(
+                verbose_wrapper, total=len(self.points), **tqdm_kwargs
+            )
         for point in verbose_wrapper:
             row = self.qf.weights * self.weight_kernel(self.dist(self.points, point))
             row_mask = np.abs(row) > self.sparcity_tolerance
@@ -91,11 +96,8 @@ class NeuralFieldSparse(NeuralField):
             indices += list(index_arr[row_mask])
             indptr.append(len(data))
 
-        if verbose:
-            print("Constructing Sparse Matrix")
         self.conv_mat = csr_array((data, indices, indptr), shape=shape)
-        if verbose:
-            print(f"Fill = {100 * self.conv_mat.nnz / len(self.points)**2:.2f}%")
+        self.fill = 100 * self.conv_mat.nnz / len(self.points)**2
 
 
 if __name__ == "__main__":
