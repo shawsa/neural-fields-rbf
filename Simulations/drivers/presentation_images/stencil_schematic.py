@@ -40,6 +40,7 @@ plt.axis("equal")
 plt.axis("off")
 plt.tight_layout()
 plt.savefig("triangulation.eps")
+plt.savefig("triangulation.jpeg")
 
 
 plt.figure(figsize=(8, 8))
@@ -52,6 +53,7 @@ plt.axis("equal")
 plt.axis("off")
 plt.tight_layout()
 plt.savefig("weights.eps")
+plt.savefig("weights.jpeg")
 
 print("negative weights")
 print(qf.weights[qf.weights < 0])

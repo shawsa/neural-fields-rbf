@@ -1,7 +1,7 @@
 from itertools import islice
 import matplotlib.pyplot as plt
 import numpy as np
-from odeiter import TimeDomain_Start_Stop_MaxSpacing, Euler, RK4
+from odeiter import TimeDomain_Start_Stop_MaxSpacing, RK4
 from odeiter.adams_bashforth import AB5
 from tqdm import tqdm
 
@@ -30,7 +30,8 @@ class NullContext:
         pass
 
 
-FILE_NAME = "media/anim_cartesian_manufactured.gif"
+# FILE_NAME = "media/anim_cartesian_manufactured.gif"
+FILE_NAME = "media/anim_cartesian_manufactured2.gif"
 # FILE_NAME = "media/anim_cartesian_manufactured_coarse.gif"
 # FILE_NAME = "media/anim_cartesian_manufactured_euler.gif"
 SAVE_ANIMATION = False
@@ -38,16 +39,16 @@ SAVE_ANIMATION = False
 
 solver = AB5(seed=RK4(), seed_steps_per_step=2)
 # solver = RK4()
-num_points_per_side = 1601
+num_points_per_side = 801
 # delta_t = 1e-3
-delta_t = 1e-3 / 2
+delta_t = 1e-2
 
 width = 30
 x_linspace_params = (-width / 2, width / 2, num_points_per_side)
 y_linspace_params = x_linspace_params
 
-# t0, tf = 0, 2 * np.pi
-t0, tf = 0, 0.1  # 2 * np.pi
+t0, tf = 0, 2 * np.pi
+# t0, tf = 0, 0.1  # 2 * np.pi
 # delta_t = 5e-4
 # delta_t = 1e-4
 
@@ -86,7 +87,9 @@ time = TimeDomain_Start_Stop_MaxSpacing(t0, tf, delta_t)
 
 u0 = sol.exact(space.X, space.Y, 0)
 
-fig, (ax_sol, ax_err) = plt.subplots(2, 1, figsize=(5, 10))
+fig, (ax_sol, ax_err) = plt.subplots(1, 2, figsize=(14, 5))
+ax_sol.set_title("Solution")
+ax_err.set_title("Error")
 mesh = ax_sol.pcolormesh(
     space.X,
     space.Y,
