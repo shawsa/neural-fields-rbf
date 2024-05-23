@@ -1,9 +1,24 @@
 from functools import partial
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import numpy as np
 import numpy.linalg as la
+from scipy.spatial import distance_matrix, Delaunay, ConvexHull
 
-from scipy.spatial import distance_matrix, Delaunay
+
+class TriMesh:
+    def __init__(self, points: np.ndarray[float], simplices: np.ndarray[int]):
+        self.points = points
+        self.simplices = simplices
+
+    def neighbors(self, face_index: int):
+        a, b, c = self.simplices[face_index]
+        neighbors = []
+        for face in self.simplices:
+            if sum([a in face, b in face, c in face]) == 2:
+                neighbors.append(face)
+        return np.array(neighbors, dtype=int)
+
 
 n_theta = 10
 n_phi = 10
@@ -24,8 +39,22 @@ for batch, theta in enumerate(thetas):
     points[rows, 2] = np.cos(phis)
 
 
+hull = ConvexHull(points)
+trimesh = TriMesh(points, hull.simplices)
+
 fig = plt.figure("sphere")
 ax = fig.add_subplot(projection="3d")
 ax.scatter(*points.T)
+# ax.add_collection(Poly3DCollection(points[hull.simplices]))
+
+for face in hull.simplices:
+    indices = np.array((*face, face[0]), dtype=int)
+    ax.plot(*points[indices].T, "k-")
 
 
+face_index = 45
+face = trimesh.simplices[face_index]
+ax.add_collection(Poly3DCollection(points[face][None, :], facecolors="blue"))
+ax.add_collection(
+    Poly3DCollection(points[trimesh.neighbors(face_index)], facecolors="green")
+)
