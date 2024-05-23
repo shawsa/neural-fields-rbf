@@ -5,20 +5,7 @@ import numpy as np
 import numpy.linalg as la
 from scipy.spatial import distance_matrix, Delaunay, ConvexHull
 
-
-class TriMesh:
-    def __init__(self, points: np.ndarray[float], simplices: np.ndarray[int]):
-        self.points = points
-        self.simplices = simplices
-
-    def neighbors(self, face_index: int):
-        a, b, c = self.simplices[face_index]
-        neighbors = []
-        for face in self.simplices:
-            if sum([a in face, b in face, c in face]) == 2:
-                neighbors.append(face)
-        return np.array(neighbors, dtype=int)
-
+from rbf.quadrature import TriMesh
 
 n_theta = 10
 n_phi = 10
@@ -58,3 +45,15 @@ ax.add_collection(Poly3DCollection(points[face][None, :], facecolors="blue"))
 ax.add_collection(
     Poly3DCollection(points[trimesh.neighbors(face_index)], facecolors="green")
 )
+
+normal = np.array([
+    1.1*trimesh.face_normal(face, orient_along=points[face[0]]),
+    [0, 0, 0]
+])
+ax.plot(*normal.T, "r-")
+plt.axis("equal")
+
+
+for face_index in range(len(trimesh.simplices)):
+    xO = trimesh.projection_point(face_index)
+    print(f"{xO=}, len={la.norm(xO)}")
