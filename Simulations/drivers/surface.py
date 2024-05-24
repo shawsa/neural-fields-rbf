@@ -1,11 +1,9 @@
-from functools import partial
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import numpy as np
-import numpy.linalg as la
-from scipy.spatial import distance_matrix, Delaunay, ConvexHull
+from scipy.spatial import ConvexHull, KDTree
 
-from rbf.quadrature import TriMesh
+from rbf.surface import TriMesh, rotation_matrix, rotation_matrix2
+
+import pyvista as pv
 
 n_theta = 10
 n_phi = 10
@@ -29,31 +27,88 @@ for batch, theta in enumerate(thetas):
 hull = ConvexHull(points)
 trimesh = TriMesh(points, hull.simplices)
 
-fig = plt.figure("sphere")
-ax = fig.add_subplot(projection="3d")
-ax.scatter(*points.T)
-# ax.add_collection(Poly3DCollection(points[hull.simplices]))
+FACE_INDEX = 45
+face = trimesh.get_face(FACE_INDEX)
+neighbors = face.neighbors()
 
-for face in hull.simplices:
-    indices = np.array((*face, face[0]), dtype=int)
-    ax.plot(*points[indices].T, "k-")
+color_arr = np.zeros(len(trimesh.simplices))
+color_arr[face.index] = 1
+for neighbor in neighbors:
+    color_arr[neighbor.index] = 2
+
+surf = pv.PolyData(points, [(3, *f) for f in trimesh.simplices])
+normals = pv.PolyData([f.center for f in trimesh.faces])
+normals["vectors"] = 0.1 * np.array([f.normal for f in trimesh.faces])
+normals.set_active_vectors("vectors", preference="point")
+
+edge_normals = pv.PolyData(
+    [
+        (face.a + face.b) / 2,
+        (face.b + face.c) / 2,
+        (face.c + face.a) / 2,
+    ]
+)
+edge_normals["vectors"] = 0.2 * np.array(trimesh.edge_normals(face, neighbors))
+edge_normals.set_active_vectors("vectors")
+
+kdt = KDTree(points)
+
+_, stencil = kdt.query(face.center, k=18)
+stencil_points = pv.PolyData(points[stencil])
+stencil_map = {value: index for index, value in enumerate(stencil)}
+stencil_mesh = []
+for f in trimesh.faces:
+    if sum(i in stencil for i in f.vert_indices) == 3:
+        stencil_mesh.append([stencil_map[i] for i in f.vert_indices])
 
 
-face_index = 45
-face = trimesh.simplices[face_index]
-ax.add_collection(Poly3DCollection(points[face][None, :], facecolors="blue"))
-ax.add_collection(
-    Poly3DCollection(points[trimesh.neighbors(face_index)], facecolors="green")
+proj = trimesh.projection_point(face.index)
+shift_points = stencil_points.points - proj
+R = rotation_matrix(face.center - proj, np.array([0, 0, 1]))
+R_flat = R.copy()
+R_flat[2] = np.array([0, 0, 0])
+planar_stencil_points = np.zeros_like(shift_points)
+for index, pnt in enumerate(shift_points):
+    planar_stencil_points[index] = (
+        R.T
+        @ R_flat
+        @ (
+            np.cross(face.normal, np.cross(pnt, face.center - proj))
+            / np.dot(face.normal, pnt)
+        )
+        + face.center
+    )
+
+planar_stencil_mesh = pv.PolyData(
+    planar_stencil_points, [(3, *f) for f in stencil_mesh]
 )
 
-normal = np.array([
-    1.1*trimesh.face_normal(face, orient_along=points[face[0]]),
-    [0, 0, 0]
-])
-ax.plot(*normal.T, "r-")
-plt.axis("equal")
+projection_points = np.array([proj, *planar_stencil_mesh.points])
+proj_mesh = pv.PolyData(
+    projection_points, [(2, 0, i) for i in range(1, len(projection_points))]
+)
 
-
-for face_index in range(len(trimesh.simplices)):
-    xO = trimesh.projection_point(face_index)
-    print(f"{xO=}, len={la.norm(xO)}")
+plotter = pv.Plotter()
+plotter.add_mesh(
+    surf, scalars=color_arr, show_edges=True, cmap="tab10", show_scalar_bar=False
+)
+plotter.add_mesh(normals.arrows, show_scalar_bar=False)
+plotter.add_mesh(edge_normals.arrows, color="red", show_scalar_bar=False)
+plotter.add_mesh(stencil_points, color="red", show_scalar_bar=False)
+plotter.add_mesh(
+    planar_stencil_mesh,
+    color="green",
+    show_scalar_bar=False,
+    style="wireframe",
+    show_edges=True,
+    line_width=3,
+)
+plotter.add_mesh(
+    proj_mesh,
+    color="blue",
+    show_scalar_bar=False,
+    style="wireframe",
+    show_edges=True,
+    line_width=3,
+)
+plotter.show()

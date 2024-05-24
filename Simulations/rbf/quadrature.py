@@ -5,6 +5,7 @@ from rbf.poly_utils import poly_powers_gen
 from rbf.quad_lib import get_right_triangle_integral_function
 from rbf.rbf import RBF
 from rbf.stencil import Stencil
+from rbf.surface import TriMesh
 from scipy.spatial import Delaunay, KDTree
 from tqdm import tqdm
 
@@ -100,64 +101,6 @@ class LocalQuad:
             self.weights[stencil.mesh_indices] += stencil.weights(
                 self.rbf, self.poly_deg
             )
-
-
-class TriMesh:
-    """A wrapper class for a triangular mesh of a surface."""
-
-    def __init__(self, points: np.ndarray[float], simplices: np.ndarray[int]):
-        self.points = points
-        self.simplices = simplices
-
-    def neighbors(self, face_index: int):
-        a, b, c = self.simplices[face_index]
-        neighbors = []
-        for face in self.simplices:
-            if sum([a in face, b in face, c in face]) == 2:
-                neighbors.append(face)
-        return np.array(neighbors, dtype=int)
-
-    def face_normal(
-        self, face: np.ndarray[int], orient_along: (None | np.ndarray[float]) = None
-    ):
-        verts = self.points[face]
-        normal = np.cross(verts[1] - verts[0], verts[2] - verts[0])
-        sign = 1
-        if orient_along is not None:
-            sign = np.sign(np.dot(normal, orient_along))
-        return normal * sign / la.norm(normal)
-
-    def projection_point(self, face_index: int):
-        face = self.simplices[face_index]
-        A_index, B_index, C_index = face
-        face_normal = self.face_normal(face)
-        neighbors = self.neighbors(face_index)
-        xA = self.points[A_index]
-        xB = self.points[B_index]
-        xC = self.points[C_index]
-
-        for neighbor in neighbors:
-            if A_index in neighbor and B_index in neighbor:
-                face_AB = neighbor
-            if A_index in neighbor and C_index in neighbor:
-                face_AC = neighbor
-            if B_index in neighbor and C_index in neighbor:
-                face_BC = neighbor
-
-        nAB = 0.5 * (face_normal + self.face_normal(face_AB, orient_along=face_normal))
-        nOAB = np.cross(nAB, xB - xA)
-
-        nCA = 0.5 * (face_normal + self.face_normal(face_AC, orient_along=face_normal))
-        nOCA = np.cross(nCA, xA - xC)
-
-        nBC = 0.5 * (face_normal + self.face_normal(face_BC, orient_along=face_normal))
-        nOBC = np.cross(nBC, xC - xB)
-
-        vOA = np.cross(nOAB, nOCA)
-
-        xO = self.points[A_index] + (np.dot(nOBC, xB - xA) / np.dot(nOBC, vOA)) * vOA
-
-        return xO
 
 
 class SurfaceQuad:
