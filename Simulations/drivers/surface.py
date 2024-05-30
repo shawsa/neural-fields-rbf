@@ -64,7 +64,7 @@ for f in trimesh.faces:
 
 proj = trimesh.projection_point(face.index)
 shift_points = stencil_points.points - proj
-R = rotation_matrix(face.center - proj, np.array([0, 0, 1]))
+R = rotation_matrix(face.normal, np.array([0, 0, 1]))
 R_flat = R.copy()
 R_flat[2] = np.array([0, 0, 0])
 planar_stencil_points = np.zeros_like(shift_points)
@@ -90,7 +90,11 @@ proj_mesh = pv.PolyData(
 
 plotter = pv.Plotter()
 plotter.add_mesh(
-    surf, scalars=color_arr, show_edges=True, cmap="tab10", show_scalar_bar=False
+    surf,
+    scalars=color_arr,
+    show_edges=True,
+    cmap=["#AAAAAA", "#005500", "#774444"],
+    show_scalar_bar=False,
 )
 plotter.add_mesh(normals.arrows, show_scalar_bar=False)
 plotter.add_mesh(edge_normals.arrows, color="red", show_scalar_bar=False)

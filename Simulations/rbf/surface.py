@@ -9,7 +9,7 @@ def rotation_matrix(a: np.ndarray[float], b: np.ndarray[float]) -> np.ndarray[fl
     return R
 
 
-def _rotation_matrix2(a: np.ndarray[float]) -> np.ndarray[float]:
+def rotation_matrix2(a: np.ndarray[float]) -> np.ndarray[float]:
     nx, ny, nz = a / la.norm(a)
     proj_mag = np.sqrt(nx**2 + ny**2)
     mag = np.sqrt(nx**2 + ny**2 + nz**2)
