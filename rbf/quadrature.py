@@ -9,9 +9,6 @@ from rbf.surface import TriMesh
 from scipy.spatial import Delaunay, KDTree
 from tqdm import tqdm
 
-from multiprocessing import Pool
-from functools import partial
-
 
 class QuadStencil(Stencil):
     """An object to store a quadrature stencil for a given Trianglular domain,
@@ -104,8 +101,8 @@ class LocalQuad:
 
 
 class SurfaceQuad:
-    """Generate quadrature weights for vertices of a triangular mesh of a closed 2D surface
-    embedded in 3D space.
+    """Generate quadrature weights for vertices of a triangular mesh of a closed 2D
+    surface embedded in 3D space.
 
     Uses the algorithm from Reeger JA, Fornberg B, Watts ML. 2016
     Numerical quadrature over smooth, closed surfaces. Proc.R.Soc.A472: 20160401.
