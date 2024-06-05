@@ -1,20 +1,15 @@
 """
 A driver testing 2D interpolation on scattered nodes.
 """
-
-from functools import partial
 import matplotlib
 import matplotlib.pyplot as plt
-
 import numpy as np
-import numpy.linalg as la
+from scipy.special import roots_chebyt as cheb
+from tqdm import tqdm
 
 from rbf.rbf import PHS
 from rbf.points import UnitSquare
-from rbf.interpolate import interpolate, LocalInterpolator
-
-from scipy.special import roots_chebyt as cheb
-from tqdm import tqdm
+from rbf.interpolate import LocalInterpolator
 
 
 ########################
@@ -104,12 +99,10 @@ print(f"Function value = {test_func(*eval_point)}")
 print(f"Interpolant value = {approx(eval_point)}")
 print(f"Interpolation error = {approx(eval_point) - test_func(*eval_point): .3E}")
 
-errors = np.empty(ys_dense.shape)
-for index, (x, y) in tqdm(
-    enumerate(zip(xs_dense.ravel(), ys_dense.ravel())), total=len(xs_dense.ravel())
-):
-    errors.ravel()[index] = abs(approx(np.array((x, y))) - test_func(x, y))
-
+errors = np.abs(
+    approx(np.array([xs_dense.ravel(), ys_dense.ravel()]).T).reshape(xs_dense.shape)
+    - fs_dense
+)
 print(f"max error over domain: {np.max(errors): .3E}")
 
 fig = plt.figure("RBF interpolation error", figsize=(8, 4))
@@ -121,7 +114,7 @@ ax_color_bar = fig.add_subplot(grid[0, 6])
 # plot function and points
 ax_function.set_title("Test Function")
 ax_function.pcolormesh(xs_dense, ys_dense, fs_dense)
-ax_function.plot(points[:, 0], points[:, 1], "r.")
+ax_function.plot(*points.T, "r.")
 
 ax_error.set_title("Error")
 ax_error.pcolormesh(xs_dense, ys_dense, errors)

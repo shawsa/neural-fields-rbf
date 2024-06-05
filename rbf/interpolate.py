@@ -1,12 +1,13 @@
 """
-An RBF interpolant class.
+Radial basis function interpolation classes.
 """
 
 import numpy as np
 import numpy.linalg as la
+from scipy.spatial import distance_matrix, KDTree
+
 from .poly_utils import poly_powers
-from .rbf import RBF, PHS, pairwise_dist
-from scipy.spatial import KDTree
+from .rbf import RBF, PHS
 from .stencil import Stencil
 
 
@@ -15,6 +16,7 @@ class Interpolator:
         self, *, stencil: Stencil, fs: np.ndarray, rbf: RBF, poly_deg: int = -1
     ):
         assert len(fs) == stencil.num_points
+        self.points = stencil.points
         self.stencil = stencil
         self.rbf = rbf
         self.poly_deg = poly_deg
@@ -27,16 +29,14 @@ class Interpolator:
         try:
             weights = la.solve(A, ys)
         except la.LinAlgError:
-            raise ValueError(
-                """Interpolation matrix is singular.
-                I haven't yet implemented the Schur decomp solve yet.
-                For now, use shape parameter RBFs."""
-            )
+            raise ValueError("RBF matrix singular")
+
         self.rbf_weights = weights[: self.stencil.num_points]
         self.poly_weights = weights[self.stencil.num_points :]
 
-    def __call__(self, z):
-        z = self.stencil.shift_and_scale(z)
+    def point_eval(self, *coords: list[float]) -> float:
+        """Evaluate the RBF interpolant"""
+        z = self.stencil.shift_and_scale(np.array(coords))
         rbf_val = sum(
             w * self.rbf(la.norm(z - point))
             for w, point in zip(self.rbf_weights, self.stencil.scaled_points)
@@ -50,8 +50,43 @@ class Interpolator:
         )
         return rbf_val + poly_val
 
+    def batch_eval(self, zs: np.ndarray[float]) -> np.ndarray[float]:
+        """Evaluate the RBF interpolant. zs is a matrix where each row
+        is an evaluation point."""
+        zs_shifted = self.stencil.shift_and_scale(zs)
+        rbf_val = (
+            self.rbf(distance_matrix(zs_shifted, self.stencil.scaled_points))
+        ) @ self.rbf_weights
+        poly_val = sum(
+            w * poly(zs_shifted)
+            for w, poly in zip(
+                self.poly_weights,
+                poly_powers(dim=self.stencil.dim, max_deg=self.poly_deg),
+            )
+        )
+        return rbf_val + poly_val
 
-class LocalInterpolator:
+    def __call__(self, *args):
+        """Evaluate the RBF interpolant. This is a convenicence
+        function for interactive use, and dispatches to either
+        self.point_eval or self.batch_eval. In production, use
+        these instead as they have fixed type arguments.
+        """
+
+        if len(args) > 1:
+            return self.point_eval(*args)
+        z = args[0]
+        if isinstance(z, list):
+            return self.point_eval(*z)
+        assert isinstance(
+            z, np.ndarray
+        ), f"Type {z=} not recognized, use list or np.array"
+        if z.shape == self.points[0].shape:
+            return self.point_eval(*z)
+        return self.batch_eval(z)
+
+
+class LocalInterpolator(Interpolator):
     def __init__(
         self,
         *,
@@ -59,7 +94,7 @@ class LocalInterpolator:
         fs: np.ndarray[float],
         rbf: RBF,
         poly_deg: int,
-        stencil_size: int
+        stencil_size: int,
     ):
         self.points = points
         self.fs = fs
@@ -67,7 +102,7 @@ class LocalInterpolator:
         self.poly_deg = poly_deg
         self.stencil_size = stencil_size
         self.generate_stencils()
-        self.interpolate_on_stencils()
+        self.form_interpolants()
 
     def generate_stencils(self):
         self.kdt = KDTree(self.points)
@@ -76,7 +111,7 @@ class LocalInterpolator:
             _, neighbor_indices = self.kdt.query(point, self.stencil_size)
             self.stencils.append(neighbor_indices)
 
-    def interpolate_on_stencils(self):
+    def form_interpolants(self):
         self.local_interpolants = []
         for stencil in self.stencils:
             self.local_interpolants.append(
@@ -88,9 +123,18 @@ class LocalInterpolator:
                 )
             )
 
-    def __call__(self, eval_point: np.ndarray) -> float:
-        _, index = self.kdt.query(eval_point, 1)
-        return self.local_interpolants[index](eval_point)
+    def point_eval(self, *coords: list[float]) -> float:
+        point = np.array(coords)
+        _, index = self.kdt.query(point, 1)
+        return self.local_interpolants[index].point_eval(*coords)
+
+    def batch_eval(self, points: np.ndarray[float]) -> np.ndarray[float]:
+        ret = np.zeros(len(points))
+        _, indices = self.kdt.query(points)
+        for index, approx in enumerate(self.local_interpolants):
+            mask = indices == index
+            ret[mask] = approx.batch_eval(points[mask])
+        return ret
 
 
 class LocalInterpolator1D(LocalInterpolator):

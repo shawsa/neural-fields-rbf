@@ -33,6 +33,11 @@ class NullContext:
 FILE_FULL = "media/presentation_projection_full.gif"
 FILE_POINT = "media/presentation_projection_points.gif"
 FILE_INTERP = "media/presentation_projection_interp.gif"
+FILE_CONV_0 = "media/presentation_projection_convergence_0.gif"
+FILE_CONV_1 = "media/presentation_projection_convergence_1.gif"
+FILE_CONV_2 = "media/presentation_projection_convergence_2.gif"
+
+
 TEMP_FILE = "media/temp"
 SAVE_ANIMATION = False
 
@@ -143,7 +148,6 @@ rbf = PHS(7)
 poly_deg = 4
 stencil_size = 35
 
-total = space.X.shape[0] * space.X.shape[1]
 plt.figure(figsize=figsize)
 mesh = plt.pcolormesh(
     space.X,
@@ -179,15 +183,121 @@ with writer:
             poly_deg=poly_deg,
             stencil_size=stencil_size,
         )
-        u = np.empty_like(space.X)
-        for index, (x, y) in tqdm(
-            enumerate(zip(space.X.ravel(), space.Y.ravel())),
-            total=total,
-            position=1,
-            leave=True,
-        ):
-            u.ravel()[index] = approx([x, y])
-        mesh.set_array(u)
+        mesh.set_array(approx(space.points))
+        plt.draw()
+        plt.pause(1e-3)
+        plt.savefig(TEMP_FILE + ".png")
+        image = imageio.imread(TEMP_FILE + ".png")
+        os.remove(TEMP_FILE + ".png")
+        writer.append_data(image)
+
+# convergence 0
+plt.figure(figsize=figsize)
+mesh = plt.pcolormesh(
+    space.X,
+    space.Y,
+    u0,
+    cmap="jet",
+    vmin=np.min(u0),
+    vmax=np.max(u0),
+)
+plt.xlim(-width / 2, width / 2)
+plt.ylim(-width / 2, width / 2)
+plt.axis("off")
+
+if SAVE_ANIMATION:
+    writer = imageio.get_writer(FILE_CONV_0, mode="I", loop=0)
+else:
+    writer = NullContext()
+
+with writer:
+    for t in (tqdm_obj := tqdm(time.array, position=0, leave=True)):
+        approx = LocalInterpolator(
+            points=points,
+            fs=sol.exact(*points.T, t),
+            rbf=rbf,
+            poly_deg=poly_deg,
+            stencil_size=stencil_size,
+        )
+        mesh.set_array(approx(space.points))
+        plt.draw()
+        plt.pause(1e-3)
+        plt.savefig(TEMP_FILE + ".png")
+        image = imageio.imread(TEMP_FILE + ".png")
+        os.remove(TEMP_FILE + ".png")
+        writer.append_data(image)
+
+# convergence 1
+num_points = 150
+np.random.seed(0)
+points = UnitSquare(num_points, verbose=True).points * width - width / 2
+plt.figure(figsize=figsize)
+mesh = plt.pcolormesh(
+    space.X,
+    space.Y,
+    u0,
+    cmap="jet",
+    vmin=np.min(u0),
+    vmax=np.max(u0),
+)
+plt.xlim(-width / 2, width / 2)
+plt.ylim(-width / 2, width / 2)
+plt.axis("off")
+
+if SAVE_ANIMATION:
+    writer = imageio.get_writer(FILE_CONV_1, mode="I", loop=0)
+else:
+    writer = NullContext()
+
+with writer:
+    for t in (tqdm_obj := tqdm(time.array, position=0, leave=True)):
+        approx = LocalInterpolator(
+            points=points,
+            fs=sol.exact(*points.T, t),
+            rbf=rbf,
+            poly_deg=poly_deg,
+            stencil_size=stencil_size,
+        )
+        mesh.set_array(approx(space.points))
+        plt.draw()
+        plt.pause(1e-3)
+        plt.savefig(TEMP_FILE + ".png")
+        image = imageio.imread(TEMP_FILE + ".png")
+        os.remove(TEMP_FILE + ".png")
+        writer.append_data(image)
+
+# convergence 2
+num_points = 200
+np.random.seed(0)
+points = UnitSquare(num_points, verbose=True).points * width - width / 2
+plt.figure(figsize=figsize)
+mesh = plt.pcolormesh(
+    space.X,
+    space.Y,
+    u0,
+    cmap="jet",
+    vmin=np.min(u0),
+    vmax=np.max(u0),
+)
+plt.xlim(-width / 2, width / 2)
+plt.ylim(-width / 2, width / 2)
+plt.axis("off")
+
+if SAVE_ANIMATION:
+    writer = imageio.get_writer(FILE_CONV_2, mode="I", loop=0)
+else:
+    writer = NullContext()
+
+with writer:
+    for t in (tqdm_obj := tqdm(time.array, position=0, leave=True)):
+        approx = LocalInterpolator(
+            points=points,
+            fs=sol.exact(*points.T, t),
+            rbf=rbf,
+            poly_deg=poly_deg,
+            stencil_size=stencil_size,
+        )
+        mesh.set_array(approx(space.points))
         plt.draw()
         plt.pause(1e-3)
         plt.savefig(TEMP_FILE + ".png")

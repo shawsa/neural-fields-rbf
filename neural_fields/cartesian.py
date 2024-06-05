@@ -36,6 +36,10 @@ class SpaceDomain:
             np.linspace(self.y_min, self.y_max, self.y_num, endpoint=False),
         )
 
+    @property
+    def points(self):
+        return np.block([[self.X.ravel()], [self.Y.ravel()]]).T
+
     def __repr__(self):
         ret = f"Domain [{self.x_min}, {self.x_max}]*[{self.y_min}, {self.y_max}]"
         ret += " " * 4 + f"Cell size: {(self.x_step, self.y_step)}"
