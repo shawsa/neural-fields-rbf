@@ -29,19 +29,19 @@ pairwise_dist = distance_matrix
 
 class RBF(ABC):
     @abstractmethod
-    def __call__(r):
+    def __call__(self, r):
         raise NotImplementedError
 
     @abstractmethod
-    def dr(r):
+    def dr(self, r):
         raise NotImplementedError
 
     @abstractmethod
-    def d2r(r):
+    def d2r(self, r):
         raise NotImplementedError
 
     @abstractmethod
-    def dr_div_r(r):
+    def dr_div_r(self, r):
         raise NotImplementedError
 
     @abstractmethod
@@ -101,3 +101,23 @@ def PHS(deg: int) -> RBF:
     if deg % 2 == 0:
         return EvenPHS(deg)
     return OddPHS(deg)
+
+
+class Gaussian(RBF):
+    def __init__(self, shape: float):
+        self.shape = shape
+
+    def __call__(self, r):
+        return np.exp(-(r**2) / self.shape)
+
+    def dr(r):
+        raise NotImplementedError
+
+    def d2r(r):
+        raise NotImplementedError
+
+    def dr_div_r(r):
+        raise NotImplementedError
+
+    def __repr__(self):
+        return f"Gaussian(shape={self.shape})"
