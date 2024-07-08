@@ -4,25 +4,11 @@ from scipy.spatial import ConvexHull, KDTree
 import pyvista as pv
 
 from rbf.surface import TriMesh, SurfaceStencil
+from rbf.points.sphere import SpherePoints
 
-n_theta = 20
-n_phi = 10
-x_wavieness = 2
-
-thetas = np.linspace(0, 2 * np.pi, n_theta, endpoint=False)
-phis = np.linspace(0, np.pi, n_phi + 2)[1:-1]
-
-points = np.zeros((n_theta * n_phi + 2, 3))
-points[-1] = (0, 0, -1)
-points[-2] = (0, 0, 1)
-for batch, theta in enumerate(thetas):
-    rows = slice(n_phi * batch, n_phi * (batch + 1))
-    points[rows, 0] = np.cos(theta + np.cos(2 * x_wavieness * phis) / n_theta) * np.sin(
-        phis
-    )
-    points[rows, 1] = np.sin(theta) * np.sin(phis)
-    points[rows, 2] = np.cos(phis)
-points /= la.norm(points, axis=1)[:, np.newaxis]
+N = 200
+np.random.seed(0)
+points = SpherePoints(N=N, auto_settle=True, verbose=True).points
 
 hull = ConvexHull(points)
 trimesh = TriMesh(points, hull.simplices, normals=points)
@@ -37,9 +23,9 @@ for neighbor in neighbors:
     color_arr[neighbor.index] = 2
 
 surf = pv.PolyData(points, [(3, *f) for f in trimesh.simplices])
-normals = pv.PolyData([f.center for f in trimesh.faces])
-normals["vectors"] = 0.1 * np.array([f.normal for f in trimesh.faces])
-normals.set_active_vectors("vectors", preference="point")
+# normals = pv.PolyData([f.center for f in trimesh.faces])
+# normals["vectors"] = 0.1 * np.array([f.normal for f in trimesh.faces])
+# normals.set_active_vectors("vectors", preference="point")
 
 edge_normals = pv.PolyData(
     [
@@ -80,7 +66,7 @@ proj_mesh = pv.PolyData(
     projection_points, [(2, 0, i) for i in range(1, len(projection_points))]
 )
 
-plotter = pv.Plotter()
+plotter = pv.Plotter(off_screen=True)
 plotter.add_mesh(
     surf,
     scalars=color_arr,
@@ -88,7 +74,7 @@ plotter.add_mesh(
     cmap=["#AAAAAA", "#005500", "#774444"],
     show_scalar_bar=False,
 )
-plotter.add_mesh(normals.arrows, show_scalar_bar=False)
+# plotter.add_mesh(normals.arrows, show_scalar_bar=False)
 plotter.add_mesh(edge_normals.arrows, color="red", show_scalar_bar=False)
 plotter.add_mesh(stencil_points, color="red", show_scalar_bar=False)
 plotter.add_mesh(
@@ -107,4 +93,5 @@ plotter.add_mesh(
     show_edges=True,
     line_width=3,
 )
+plotter.screenshot("gnomic.png")
 plotter.show()
