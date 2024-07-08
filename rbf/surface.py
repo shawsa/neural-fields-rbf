@@ -1,28 +1,54 @@
+from functools import cache
 import numpy as np
 import numpy.linalg as la
+from tqdm import tqdm
+
+from rbf.geometry import triangle
+from rbf.rbf import RBF
+from rbf.quadrature import QuadStencil, LocalQuadStencil
+from scipy.spatial import KDTree
 
 
 def rotation_matrix(a: np.ndarray[float], b: np.ndarray[float]) -> np.ndarray[float]:
     """Create a matrix that rotates the vector a to the vector b."""
-    v = a/la.norm(a) + b/la.norm(b)
-    R = 2/np.dot(v, v) * np.outer(v, v) - np.eye(3)
+    v = a / la.norm(a) + b / la.norm(b)
+    R = 2 / np.dot(v, v) * np.outer(v, v) - np.eye(3)
     return R
 
 
-def rotation_matrix2(a: np.ndarray[float]) -> np.ndarray[float]:
-    nx, ny, nz = a / la.norm(a)
-    proj_mag = np.sqrt(nx**2 + ny**2)
-    mag = np.sqrt(nx**2 + ny**2 + nz**2)
-    prod = proj_mag * mag
-    return np.array([
-        [nx*nz / prod, ny*nz / prod, -proj_mag / mag],
-        [-ny/proj_mag, nx/proj_mag, 0],
-        [nx / mag, ny / mag, nz/mag],
-    ])
+class TriMesh:
+    """A wrapper class for a triangular mesh of a surface."""
+
+    def __init__(
+        self,
+        points: np.ndarray[float],
+        simplices: np.ndarray[int],
+        normals=None,
+    ):
+        self.points = points
+        self.simplices = simplices
+        if normals is None:
+            self.calculate_normals()
+        else:
+            self.normals = normals
+
+    def face(self, face_index):
+        return Face(face_index, self)
+
+    @property
+    def faces(self):
+        for face_index in range(len(self.simplices)):
+            yield self.face(face_index)
+
+    def calculate_normals(self):
+        self.normals = np.zeros_like(self.points)
+        for index, point in enumerate(self.points):
+            faces = [face for face in self.faces if index in face.vert_indices]
+            self.normals[index] = sum(face.normal for face in faces)/len(faces)
 
 
 class Face:
-    def __init__(self, index: int, trimesh, normal_orientaion=None):
+    def __init__(self, index: int, trimesh: TriMesh, normal_orientaion=None):
         self.index = index
         self.trimesh = trimesh
         self.calculate_normal(normal_orientation=normal_orientaion)
@@ -61,6 +87,8 @@ class Face:
         sign = np.sign(np.dot(normal, normal_orientation))
         self.normal = normal * sign / la.norm(normal)
 
+    @property
+    @cache
     def neighbors(self):
         neighbors = [None, None, None]
         i, j, k = self.vert_indices
@@ -79,31 +107,120 @@ class Face:
                 )
         return neighbors
 
-
-class TriMesh:
-    """A wrapper class for a triangular mesh of a surface."""
-
-    def __init__(self, points: np.ndarray[float], simplices: np.ndarray[int]):
-        self.points = points
-        self.simplices = simplices
-
-    def get_face(self, face_index):
-        return Face(face_index, self)
+    @property
+    def edge_normals(self) -> list[np.ndarray[float]]:
+        return [(self.normal + nbr.normal) / 2 for nbr in self.neighbors]
 
     @property
-    def faces(self):
-        for face_index in range(len(self.simplices)):
-            yield self.get_face(face_index)
-
-    def edge_normals(self, face, neighbors: list[Face]) -> list[np.ndarray[float]]:
-        return [(face.normal + nbr.normal) / 2 for nbr in neighbors]
-
-    def projection_point(self, face_index):
-        face = self.get_face(face_index)
-        neighbors = face.neighbors()
-        nab, nbc, nca = self.edge_normals(face, neighbors)
-        noab = np.cross(nab, face.b - face.a)
-        nobc = np.cross(nbc, face.c - face.b)
-        noca = np.cross(nca, face.a - face.c)
+    @cache
+    def projection_point(self):
+        nab, nbc, nca = self.edge_normals
+        noab = np.cross(nab, self.b - self.a)
+        nobc = np.cross(nbc, self.c - self.b)
+        noca = np.cross(nca, self.a - self.c)
         voa = np.cross(noab, noca)
-        return face.a + np.dot(nobc, face.b - face.a) / np.dot(nobc, voa) * voa
+        return self.a + np.dot(nobc, self.b - self.a) / np.dot(nobc, voa) * voa
+
+
+class SurfaceStencil(LocalQuadStencil):
+    def __init__(
+        self,
+        face: Face,
+        points: np.ndarray[float],
+        normals: np.ndarray[float],
+    ):
+        self.face = face
+        self.points = points
+        self.normals = normals
+
+    @property
+    def rotation_matrix(self) -> np.ndarray[float]:
+        return rotation_matrix(self.face.normal, np.array([0, 0, 1]))
+
+    def gnomic_proj(self, points) -> np.ndarray[float]:
+        normal = self.face.normal
+        center = self.face.center - self.face.projection_point
+        points = points - self.face.projection_point
+        return (
+            np.cross(normal, np.cross(points, center))
+            / np.dot(points, normal)[:, np.newaxis]
+        ) @ self.rotation_matrix[:2].T
+
+    @property
+    def planar_points(self) -> np.ndarray[float]:
+        return self.gnomic_proj(self.points)
+
+    @property
+    def planar_face_verts(self) -> np.ndarray[float]:
+        return self.gnomic_proj(self.face.verts)
+
+    def weights(self, rbf: RBF, poly_deg: int):
+        flat_stencil = QuadStencil(self.planar_points, triangle(self.planar_face_verts))
+        flat_weights = flat_stencil.weights(rbf, poly_deg)
+        weights = np.zeros_like(flat_weights)
+        proj = self.face.projection_point
+        # make faster?
+        for index, (w, pnt, normal) in enumerate(
+            zip(flat_weights, self.points, self.normals)
+        ):
+            ref = pnt - proj
+            num = np.dot(ref, self.face.normal)
+            weights[index] = (
+                w
+                * num
+                / np.dot(ref, normal)
+                * (num / np.dot(self.face.normal, self.face.a - proj)) ** 2
+            )
+
+        return weights
+
+
+class SurfaceQuad:
+    """Generate quadrature weights for vertices of a triangular mesh of a closed 2D
+    surface embedded in 3D space.
+
+    Uses the algorithm from Reeger JA, Fornberg B, Watts ML. 2016
+    Numerical quadrature over smooth, closed surfaces. Proc.R.Soc.A472: 20160401.
+    http://dx.doi.org/10.1098/rspa.2016.0401
+    """
+
+    def __init__(
+        self,
+        trimesh: TriMesh,
+        rbf: RBF,
+        poly_deg: int,
+        stencil_size: int,
+        verbose=False,
+        tqdm_kwargs={},
+    ):
+        self.trimesh = trimesh
+        self.rbf = rbf
+        self.poly_deg = poly_deg
+        self.stencil_size = stencil_size
+        self.verbose = verbose
+        self.tqdm_kwargs = tqdm_kwargs
+
+        self.kdt = KDTree(self.trimesh.points)
+        self.generate_weights()
+
+    def generate_weights(self):
+        self.stencils = []
+        self.weights = np.zeros(len(self.trimesh.points))
+        if self.verbose:
+            def wrapper(gen):
+                return tqdm(gen, total=len(self.trimesh.simplices), **self.tqdm_kwargs)
+        else:
+            def wrapper(gen, **_):
+                return gen
+
+        for face in wrapper(self.trimesh.faces):
+            _, neighbor_indices = self.kdt.query(face.center, self.stencil_size)
+            stencil = SurfaceStencil(
+                face,
+                self.trimesh.points[neighbor_indices],
+                self.trimesh.normals[neighbor_indices],
+            )
+            self.stencils.append(stencil)
+            self.weights[neighbor_indices] += stencil.weights(
+                self.rbf, self.poly_deg
+            )

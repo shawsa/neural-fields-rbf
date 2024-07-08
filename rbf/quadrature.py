@@ -5,7 +5,6 @@ from rbf.poly_utils import poly_powers_gen
 from rbf.quad_lib import get_right_triangle_integral_function
 from rbf.rbf import RBF
 from rbf.stencil import Stencil
-from rbf.surface import TriMesh
 from scipy.spatial import Delaunay, KDTree
 from tqdm import tqdm
 
@@ -100,30 +99,3 @@ class LocalQuad:
             )
 
 
-class SurfaceQuad:
-    """Generate quadrature weights for vertices of a triangular mesh of a closed 2D
-    surface embedded in 3D space.
-
-    Uses the algorithm from Reeger JA, Fornberg B, Watts ML. 2016
-    Numerical quadrature over smooth, closed surfaces. Proc.R.Soc.A472: 20160401.
-    http://dx.doi.org/10.1098/rspa.2016.0401
-    """
-
-    def __init__(
-        self,
-        trimesh: TriMesh,
-        rbf: RBF,
-        poly_deg: int,
-        stencil_size: int,
-        verbose=False,
-        tqdm_kwargs={},
-    ):
-        self.points = trimesh.points
-        self.rbf = rbf
-        self.poly_deg = poly_deg
-        self.stencil_size = stencil_size
-        self.verbose = verbose
-        self.tqdm_kwargs = tqdm_kwargs
-
-        self.kdt = KDTree(self.points)
-        # self.generate_weights()

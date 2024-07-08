@@ -1,11 +1,11 @@
 import numpy as np
+import numpy.linalg as la
 from scipy.spatial import ConvexHull, KDTree
-
-from rbf.surface import TriMesh, rotation_matrix, rotation_matrix2
-
 import pyvista as pv
 
-n_theta = 10
+from rbf.surface import TriMesh, SurfaceStencil
+
+n_theta = 20
 n_phi = 10
 x_wavieness = 2
 
@@ -22,14 +22,14 @@ for batch, theta in enumerate(thetas):
     )
     points[rows, 1] = np.sin(theta) * np.sin(phis)
     points[rows, 2] = np.cos(phis)
-
+points /= la.norm(points, axis=1)[:, np.newaxis]
 
 hull = ConvexHull(points)
-trimesh = TriMesh(points, hull.simplices)
+trimesh = TriMesh(points, hull.simplices, normals=points)
 
-FACE_INDEX = 45
-face = trimesh.get_face(FACE_INDEX)
-neighbors = face.neighbors()
+FACE_INDEX = 33
+face = trimesh.face(FACE_INDEX)
+neighbors = face.neighbors
 
 color_arr = np.zeros(len(trimesh.simplices))
 color_arr[face.index] = 1
@@ -48,12 +48,14 @@ edge_normals = pv.PolyData(
         (face.c + face.a) / 2,
     ]
 )
-edge_normals["vectors"] = 0.2 * np.array(trimesh.edge_normals(face, neighbors))
+edge_normals["vectors"] = 0.2 * np.array(face.edge_normals)
 edge_normals.set_active_vectors("vectors")
 
 kdt = KDTree(points)
 
+
 _, stencil = kdt.query(face.center, k=18)
+surf_stencil = SurfaceStencil(face, points[stencil], points[stencil])
 stencil_points = pv.PolyData(points[stencil])
 stencil_map = {value: index for index, value in enumerate(stencil)}
 stencil_mesh = []
@@ -62,22 +64,12 @@ for f in trimesh.faces:
         stencil_mesh.append([stencil_map[i] for i in f.vert_indices])
 
 
-proj = trimesh.projection_point(face.index)
-shift_points = stencil_points.points - proj
-R = rotation_matrix(face.normal, np.array([0, 0, 1]))
-R_flat = R.copy()
-R_flat[2] = np.array([0, 0, 0])
-planar_stencil_points = np.zeros_like(shift_points)
-for index, pnt in enumerate(shift_points):
-    planar_stencil_points[index] = (
-        R.T
-        @ R_flat
-        @ (
-            np.cross(face.normal, np.cross(pnt, face.center - proj))
-            / np.dot(face.normal, pnt)
-        )
-        + face.center
-    )
+proj = face.projection_point
+planar_stencil_points = (
+    surf_stencil.planar_points
+    @ np.eye(3)[:2]  # cast to 3d
+    @ surf_stencil.rotation_matrix  # rotation matrix is orthogonal
+) + face.center
 
 planar_stencil_mesh = pv.PolyData(
     planar_stencil_points, [(3, *f) for f in stencil_mesh]
