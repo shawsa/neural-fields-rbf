@@ -48,9 +48,9 @@ test_functions = list(
         TestFunc,
         [
             1,
-            1 + y,
-            1 + z,
-            1 + x * y,
+            # 1 + y,
+            # 1 + z,
+            # 1 + x * y,
         ],
     )
 )
@@ -65,7 +65,8 @@ stencil_size = 18
 poly_deg = 2
 
 repeats = 1
-Ns = np.logspace(3.4, 3.5, 2, dtype=int)
+# Ns = np.logspace(3.4, 3.5, 2, dtype=int)
+Ns = [10_000]
 
 # repeats = 1
 # Ns = np.logspace(2, 2.5, 3, dtype=int)
