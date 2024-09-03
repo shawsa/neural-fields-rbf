@@ -128,10 +128,12 @@ class SurfaceStencil(LocalQuadStencil):
         face: Face,
         points: np.ndarray[float],
         normals: np.ndarray[float],
+        point_indices: np.ndarray[int],
     ):
         self.face = face
         self.points = points
         self.normals = normals
+        self.point_indices = point_indices
 
     @property
     def rotation_matrix(self) -> np.ndarray[float]:
@@ -219,6 +221,7 @@ class SurfaceQuad:
                 face,
                 self.trimesh.points[neighbor_indices],
                 self.trimesh.normals[neighbor_indices],
+                neighbor_indices,
             )
             self.stencils.append(stencil)
             self.weights[neighbor_indices] += stencil.weights(
