@@ -23,28 +23,20 @@ class TriMesh:
         self,
         points: np.ndarray[float],
         simplices: np.ndarray[int],
-        normals=None,
+        normals: np.ndarray[float],
     ):
         self.points = points
         self.simplices = simplices
-        if normals is None:
-            self.calculate_normals()
-        else:
-            self.normals = normals
+        self.normals = normals
 
     def face(self, face_index):
-        return Face(face_index, self)
+        corner_index = self.simplices[face_index][0]
+        return Face(face_index, self, self.normals[corner_index])
 
     @property
     def faces(self):
         for face_index in range(len(self.simplices)):
             yield self.face(face_index)
-
-    def calculate_normals(self):
-        self.normals = np.zeros_like(self.points)
-        for index, point in enumerate(self.points):
-            faces = [face for face in self.faces if index in face.vert_indices]
-            self.normals[index] = sum(face.normal for face in faces)/len(faces)
 
 
 class Face:
@@ -156,9 +148,13 @@ class SurfaceStencil(LocalQuadStencil):
     def planar_face_verts(self) -> np.ndarray[float]:
         return self.gnomic_proj(self.face.verts)
 
+    def flat_weights(self, rbf: RBF, poly_deg: int):
+        return QuadStencil(
+            self.planar_points, triangle(self.planar_face_verts)
+        ).weights(rbf, poly_deg)
+
     def weights(self, rbf: RBF, poly_deg: int):
-        flat_stencil = QuadStencil(self.planar_points, triangle(self.planar_face_verts))
-        flat_weights = flat_stencil.weights(rbf, poly_deg)
+        flat_weights = self.flat_weights(rbf, poly_deg)
         weights = np.zeros_like(flat_weights)
         proj = self.face.projection_point
         # make faster?
@@ -209,9 +205,12 @@ class SurfaceQuad:
         self.stencils = []
         self.weights = np.zeros(len(self.trimesh.points))
         if self.verbose:
+
             def wrapper(gen):
                 return tqdm(gen, total=len(self.trimesh.simplices), **self.tqdm_kwargs)
+
         else:
+
             def wrapper(gen, **_):
                 return gen
 
@@ -224,6 +223,4 @@ class SurfaceQuad:
                 neighbor_indices,
             )
             self.stencils.append(stencil)
-            self.weights[neighbor_indices] += stencil.weights(
-                self.rbf, self.poly_deg
-            )
+            self.weights[neighbor_indices] += stencil.weights(self.rbf, self.poly_deg)

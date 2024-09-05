@@ -192,3 +192,5 @@ print(np.dot(face.normal, face.a - proj))
 print(
     f"factor = {num / np.dot(ref, normal) * (num / np.dot(face.normal, face.a - proj)) ** 2}"
 )
+
+plt.hist(quad.weights, bins=100)

@@ -48,9 +48,9 @@ test_functions = list(
         TestFunc,
         [
             1,
-            # 1 + y,
-            # 1 + z,
-            # 1 + x * y,
+            1 + y,
+            1 + z,
+            1 + x * y,
         ],
     )
 )
@@ -62,11 +62,11 @@ quad_tqdm_args = {
 
 rbf = PHS(3)
 stencil_size = 18
-poly_deg = 2
+poly_deg = 1
 
 repeats = 1
 # Ns = np.logspace(3.4, 3.5, 2, dtype=int)
-Ns = [10_000]
+Ns = [2_000, 4_000]
 
 # repeats = 1
 # Ns = np.logspace(2, 2.5, 3, dtype=int)
@@ -77,7 +77,7 @@ for trial in (tqdm_obj := tqdm(range(repeats), position=1, leave=True)):
         torus = TorusPoints(N, R=R, r=r)
         points = torus.points
         vor = LocalSurfaceVoronoi(torus.points, torus.normals, torus.implicit_surf)
-        trimesh = TriMesh(points, vor.triangles, normals=points)
+        trimesh = TriMesh(points, vor.triangles, normals=vor.normals)
 
         quad = SurfaceQuad(
             trimesh=trimesh,
