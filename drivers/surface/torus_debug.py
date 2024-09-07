@@ -51,11 +51,23 @@ poly_deg = 1
 
 N = 3_000
 
-np.random.seed(0)
+np.random.seed(1)
 torus = TorusPoints(N, R=R, r=r)
 points = torus.points
 vor = LocalSurfaceVoronoi(torus.points, torus.normals, torus.implicit_surf)
 trimesh = TriMesh(points, vor.triangles, normals=vor.normals)
+
+if False:
+    surf = pv.PolyData(points, [(3, *f) for f in vor.triangles])
+    plotter = pv.Plotter(off_screen=False)
+    plotter.add_mesh(
+        surf,
+        show_vertices=True,
+        show_edges=True,
+        show_scalar_bar=False,
+    )
+    plotter.set_focus(points[413])
+    plotter.show()
 
 quad = SurfaceQuad(
     trimesh=trimesh,
@@ -69,7 +81,9 @@ quad = SurfaceQuad(
 for test_func in test_functions:
     approx = quad.weights @ test_func(points)
     error = abs(approx - exact) / exact
-    print(f"{error=:.4g}")
+    print(f"{error=:.4E}")
+
+plt.hist(quad.weights, bins=100)
 
 print(f"max weight = {np.max(quad.weights)}")
 index = np.argmax(np.abs(quad.weights))

@@ -8,6 +8,7 @@ import sympy as sym
 from sympy.abc import x, y, z
 from tqdm import tqdm
 from min_energy_points import TorusPoints, LocalSurfaceVoronoi
+from min_energy_points.torus import SpiralTorus
 
 from rbf.rbf import RBF, PHS
 from rbf.surface import TriMesh, SurfaceQuad
@@ -61,12 +62,16 @@ quad_tqdm_args = {
 }
 
 rbf = PHS(3)
-stencil_size = 18
-poly_deg = 1
+stencil_size = 12
+poly_deg = 2
 
 repeats = 1
-# Ns = np.logspace(3.4, 3.5, 2, dtype=int)
-Ns = [2_000, 4_000]
+Ns = np.logspace(
+    np.log10(5_000),
+    np.log10(10_000),
+    5,
+    dtype=int,
+)
 
 # repeats = 1
 # Ns = np.logspace(2, 2.5, 3, dtype=int)
@@ -74,10 +79,24 @@ Ns = [2_000, 4_000]
 results = []
 for trial in (tqdm_obj := tqdm(range(repeats), position=1, leave=True)):
     for N in tqdm(Ns[::-1], position=2, leave=False):
-        torus = TorusPoints(N, R=R, r=r)
+        # torus = TorusPoints(N, R=R, r=r)
+        # vor_max_neighbors = 30
+        torus = SpiralTorus(N, R=R, r=r)
+        torus.all_points += (np.random.random(torus.all_points.shape) - 0.5) * torus.h
+        torus.settle(rate=1.0, repeat=10)
+        vor_max_neighbors = 15
+        N = torus.N
         points = torus.points
-        vor = LocalSurfaceVoronoi(torus.points, torus.normals, torus.implicit_surf)
-        trimesh = TriMesh(points, vor.triangles, normals=vor.normals)
+        valid_surface = False
+        if not valid_surface:
+            vor = LocalSurfaceVoronoi(
+                torus.points,
+                torus.normals,
+                torus.implicit_surf,
+                max_neighbors=vor_max_neighbors,
+            )
+            trimesh = TriMesh(points, vor.triangles, normals=vor.normals)
+            valid_surface = trimesh.is_valid()
 
         quad = SurfaceQuad(
             trimesh=trimesh,
