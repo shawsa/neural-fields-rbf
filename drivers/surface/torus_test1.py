@@ -52,6 +52,7 @@ test_functions = list(
             1 + y,
             1 + z,
             1 + x * y,
+            1 + sym.sin(7*x),
         ],
     )
 )
@@ -62,13 +63,13 @@ quad_tqdm_args = {
 }
 
 rbf = PHS(3)
-stencil_size = 12
-poly_deg = 2
+stencil_size = 24
+poly_deg = 3
 
-repeats = 1
+repeats = 5
 Ns = np.logspace(
-    np.log10(5_000),
-    np.log10(10_000),
+    np.log10(3_000),
+    np.log10(40_000),
     5,
     dtype=int,
 )

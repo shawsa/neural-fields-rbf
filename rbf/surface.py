@@ -1,3 +1,4 @@
+from collections import defaultdict
 from functools import cache
 import numpy as np
 import numpy.linalg as la
@@ -28,6 +29,7 @@ class TriMesh:
         self.points = points
         self.simplices = simplices
         self.normals = normals
+        self.init_vertex_map()
 
     def face(self, face_index):
         corner_index = self.simplices[face_index][0]
@@ -37,6 +39,31 @@ class TriMesh:
     def faces(self):
         for face_index in range(len(self.simplices)):
             yield self.face(face_index)
+
+    def init_vertex_map(self):
+        self.vertex_map = [set() for _ in range(len(self.points))]
+        for face_index, simplices in enumerate(self.simplices):
+            for index in simplices:
+                self.vertex_map[index].add(face_index)
+
+    def neighbors(self, face_index):
+        i, j, k = self.simplices[face_index]
+        i_set = self.vertex_map[i]
+        j_set = self.vertex_map[j]
+        k_set = self.vertex_map[k]
+        neighbors = [
+            index for index in i_set.intersection(j_set) if index != face_index
+        ]
+        neighbors += [
+            index for index in j_set.intersection(k_set) if index != face_index
+        ]
+        neighbors += [
+            index for index in k_set.intersection(i_set) if index != face_index
+        ]
+        return neighbors
+
+    def is_valid(self):
+        return all(len(self.neighbors(i)) == 3 for i in range(len(self.simplices)))
 
 
 class Face:
@@ -80,24 +107,11 @@ class Face:
         self.normal = normal * sign / la.norm(normal)
 
     @property
-    @cache
     def neighbors(self):
-        neighbors = [None, None, None]
-        i, j, k = self.vert_indices
-        for face_index, indices in enumerate(self.trimesh.simplices):
-            if i in indices and j in indices:
-                neighbors[0] = Face(
-                    face_index, self.trimesh, normal_orientaion=self.normal
-                )
-            elif j in indices and k in indices:
-                neighbors[1] = Face(
-                    face_index, self.trimesh, normal_orientaion=self.normal
-                )
-            elif k in indices and i in indices:
-                neighbors[2] = Face(
-                    face_index, self.trimesh, normal_orientaion=self.normal
-                )
-        return neighbors
+        return [
+            Face(index, self.trimesh, self.normal)
+            for index in self.trimesh.neighbors(self.index)
+        ]
 
     @property
     def edge_normals(self) -> list[np.ndarray[float]]:
