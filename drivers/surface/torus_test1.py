@@ -66,11 +66,11 @@ rbf = PHS(3)
 stencil_size = 24
 poly_deg = 3
 
-repeats = 5
+repeats = 1
 Ns = np.logspace(
-    np.log10(3_000),
-    np.log10(40_000),
-    5,
+    np.log10(4_000),
+    np.log10(64_000),
+    21,
     dtype=int,
 )
 
@@ -80,12 +80,7 @@ Ns = np.logspace(
 results = []
 for trial in (tqdm_obj := tqdm(range(repeats), position=1, leave=True)):
     for N in tqdm(Ns[::-1], position=2, leave=False):
-        # torus = TorusPoints(N, R=R, r=r)
-        # vor_max_neighbors = 30
         torus = SpiralTorus(N, R=R, r=r)
-        torus.all_points += (np.random.random(torus.all_points.shape) - 0.5) * torus.h
-        torus.settle(rate=1.0, repeat=10)
-        vor_max_neighbors = 15
         N = torus.N
         points = torus.points
         valid_surface = False
@@ -94,7 +89,6 @@ for trial in (tqdm_obj := tqdm(range(repeats), position=1, leave=True)):
                 torus.points,
                 torus.normals,
                 torus.implicit_surf,
-                max_neighbors=vor_max_neighbors,
             )
             trimesh = TriMesh(points, vor.triangles, normals=vor.normals)
             valid_surface = trimesh.is_valid()
