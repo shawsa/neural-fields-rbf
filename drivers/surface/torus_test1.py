@@ -152,4 +152,4 @@ for test_func in test_functions:
     plt.xticks()
     plt.xticks([n**-0.5 for n in Ns[::4]], [f"${n}^{{-1/2}}$" for n in Ns[::4]])
 
-    plt.savefig(f"media/{test_func}.png")
+    plt.savefig(f"media/torus_{test_func}.png")

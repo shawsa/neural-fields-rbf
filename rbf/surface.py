@@ -13,6 +13,9 @@ from scipy.spatial import KDTree
 def rotation_matrix(a: np.ndarray[float], b: np.ndarray[float]) -> np.ndarray[float]:
     """Create a matrix that rotates the vector a to the vector b."""
     v = a / la.norm(a) + b / la.norm(b)
+    d = np.dot(v, v)
+    if d < 1e-14:
+        return np.eye(3)
     R = 2 / np.dot(v, v) * np.outer(v, v) - np.eye(3)
     return R
 
