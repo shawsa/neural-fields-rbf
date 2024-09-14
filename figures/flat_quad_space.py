@@ -25,7 +25,7 @@ plt.rcParams.update(
     }
 )
 
-FILE = "flat_quad_space"
+FILE = "media/flat_quad_space"
 
 bump_radius = 0.1
 bump = PeriodicTile(Gaussian(bump_radius / 2))
@@ -41,9 +41,9 @@ sample_density = 401
 X, Y = np.meshgrid(np.linspace(0, 1, sample_density), np.linspace(0, 1, sample_density))
 
 print("Generating random points.")
+np.random.seed(0)
 rand_points = UnitSquare(n, verbose=True).points
 print("Computing random point quadrature.")
-np.random.seed(0)
 qf_rand = LocalQuad(rand_points, rbf, poly_deg, stencil_size, verbose=True)
 print("Computing random point spatial error.")
 err_rand = quad_test(qf=qf_rand, func=bump, X=X, Y=Y, verbose=True)
@@ -148,6 +148,8 @@ subplot_label_y = 1.05
 subplot_label_font = {
     "size": "x-large",
     "weight": "bold",
+    "family": "sans",
+    "usetex": False,
 }
 for ax, label in [
     (ax_rand_space, "A"),
@@ -161,15 +163,13 @@ for ax, label in [
         subplot_label_x,
         subplot_label_y,
         label,
-        fontdict=subplot_label_font,
         transform=ax.transAxes,
+        **subplot_label_font,
     )
 
 
 grid.tight_layout(fig)
-plt.pause(1e-3)
 plt.show()
 
-plt.savefig("flat_quad_space.pdf")
-plt.savefig("flat_quad_space.eps")
-plt.savefig("flat_quad_space.png", dpi=300)
+# pdfs do not look right with pcolormaps
+plt.savefig(FILE + ".png", dpi=300)
