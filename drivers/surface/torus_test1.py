@@ -1,13 +1,14 @@
 from dataclasses import dataclass
 import pickle
 import numpy as np
+from matplotlib.colors import TABLEAU_COLORS
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullFormatter, ScalarFormatter
 from scipy.stats import linregress
 import sympy as sym
 from sympy.abc import x, y, z
 from tqdm import tqdm
-from min_energy_points import TorusPoints, LocalSurfaceVoronoi
+from min_energy_points import LocalSurfaceVoronoi
 from min_energy_points.torus import SpiralTorus
 
 from rbf.rbf import RBF, PHS
@@ -34,6 +35,7 @@ class TestFunc:
 @dataclass
 class Result:
     N: int
+    h: float
     rbf: RBF
     poly_deg: int
     stencil_size: int
@@ -52,19 +54,14 @@ test_functions = list(
             1 + y,
             1 + z,
             1 + x * y,
-            1 + sym.sin(7*x),
+            1 + sym.sin(7 * x),
         ],
     )
 )
 
-quad_tqdm_args = {
-    "position": 3,
-    "leave": False,
-}
-
 rbf = PHS(3)
 stencil_size = 24
-poly_deg = 3
+poly_degs = [0, 1, 2, 3]
 
 repeats = 1
 Ns = np.logspace(
@@ -78,45 +75,60 @@ Ns = np.logspace(
 # Ns = np.logspace(2, 2.5, 3, dtype=int)
 
 results = []
-for trial in (tqdm_obj := tqdm(range(repeats), position=1, leave=True)):
-    for N in tqdm(Ns[::-1], position=2, leave=False):
-        torus = SpiralTorus(N, R=R, r=r)
-        N = torus.N
-        points = torus.points
-        valid_surface = False
-        if not valid_surface:
-            vor = LocalSurfaceVoronoi(
-                torus.points,
-                torus.normals,
-                torus.implicit_surf,
-            )
-            trimesh = TriMesh(points, vor.triangles, normals=vor.normals)
-            valid_surface = trimesh.is_valid()
+for trial in (tqdm_trial := tqdm(range(repeats), position=1, leave=True)):
+    for N in (tqdm_N := tqdm(Ns[::-1], position=2, leave=False)):
+        tqdm_N.set_description(f"{N=}")
+        for poly_deg in (tqdm_poly_deg := tqdm(poly_degs, position=3, leave=False)):
+            tqdm_poly_deg.set_description(f"{poly_deg=}")
+            torus = SpiralTorus(N, R=R, r=r)
+            N = torus.N
+            points = torus.points
+            valid_surface = False
+            if not valid_surface:
+                vor = LocalSurfaceVoronoi(
+                    torus.points,
+                    torus.normals,
+                    torus.implicit_surf,
+                    verbose=True,
+                    tqdm_args={
+                        "position": 4,
+                        "leave": False,
+                    },
+                )
+                trimesh = TriMesh(points, vor.triangles, normals=vor.normals)
+                valid_surface = trimesh.is_valid()
 
-        quad = SurfaceQuad(
-            trimesh=trimesh,
-            rbf=rbf,
-            poly_deg=poly_deg,
-            stencil_size=stencil_size,
-            verbose=True,
-            tqdm_kwargs=quad_tqdm_args,
-        )
-
-        for test_func in test_functions:
-            approx = quad.weights @ test_func(points)
-            error = abs(approx - exact) / exact
-
-            result = Result(
-                N=N,
+            quad = SurfaceQuad(
+                trimesh=trimesh,
                 rbf=rbf,
                 poly_deg=poly_deg,
                 stencil_size=stencil_size,
-                approx=approx,
-                error=error,
-                test_func=str(test_func),
+                verbose=True,
+                tqdm_kwargs={
+                    "position": 4,
+                    "leave": False,
+                    "desc": "Calculating weights",
+                },
             )
-            results.append(result)
-            tqdm_obj.set_description(f"f={test_func}, {trial=}, {N=}, {error=:.3E}")
+
+            for test_func in test_functions:
+                approx = quad.weights @ test_func(points)
+                error = abs(approx - exact) / exact
+
+                result = Result(
+                    N=N,
+                    h=vor.circum_radius,
+                    rbf=rbf,
+                    poly_deg=poly_deg,
+                    stencil_size=stencil_size,
+                    approx=approx,
+                    error=error,
+                    test_func=str(test_func),
+                )
+                results.append(result)
+                tqdm_trial.set_description(
+                    f"f={test_func}, {trial=}, {N=}, {poly_deg=}, {error=:.3E}"
+                )
 
 if SAVE_DATA:
     with open(DATA_FILE, "wb") as f:
@@ -131,18 +143,21 @@ for test_func in test_functions:
     my_res = [result for result in results if result.test_func == str(test_func)]
     hs = [result.N**-0.5 for result in my_res]
     ns = [result.N for result in my_res]
-    errs = [result.error for result in my_res]
-    fit = linregress(np.log(hs), np.log(errs))
-    plt.figure(f"{test_func=}")
-    plt.loglog(hs, errs, "k.")
-    plt.loglog(
-        hs,
-        [np.exp(fit.intercept + np.log(h) * fit.slope) for h in hs],
-        "k-",
-        label=f"deg{poly_deg}~$\\mathcal{{O}}({fit.slope:.2f})$",
-    )
-    plt.legend()
-    plt.loglog([res.N**-0.5 for res in results], [res.error for res in results], "k.")
+    for poly_deg, color in zip(poly_degs, TABLEAU_COLORS):
+        errs = [result.error for result in my_res]
+        fit = linregress(np.log(hs), np.log(errs))
+        plt.figure(f"{test_func=}")
+        plt.loglog(hs, errs, "k.")
+        plt.loglog(
+            hs,
+            [np.exp(fit.intercept + np.log(h) * fit.slope) for h in hs],
+            "k-",
+            label=f"deg{poly_deg}~$\\mathcal{{O}}({fit.slope:.2f})$",
+        )
+        plt.legend()
+        plt.loglog(
+            [res.N**-0.5 for res in results], [res.error for res in results], "k."
+        )
 
     plt.title(f"f={test_func}")
     plt.ylabel("Relative Error")
