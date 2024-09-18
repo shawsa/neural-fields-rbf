@@ -141,30 +141,31 @@ if False:
 
 for test_func in test_functions:
     my_res = [result for result in results if result.test_func == str(test_func)]
-    hs = [result.N**-0.5 for result in my_res]
-    ns = [result.N for result in my_res]
     for poly_deg, color in zip(poly_degs, TABLEAU_COLORS):
+        my_res = [
+            result
+            for result in results
+            if result.test_func == str(test_func) and result.poly_deg == poly_deg
+        ]
+        hs = [result.h for result in my_res]
+        ns = [result.N for result in my_res]
         errs = [result.error for result in my_res]
         fit = linregress(np.log(hs), np.log(errs))
         plt.figure(f"{test_func=}")
-        plt.loglog(hs, errs, "k.")
+        plt.loglog(hs, errs, ".", color=color)
         plt.loglog(
             hs,
             [np.exp(fit.intercept + np.log(h) * fit.slope) for h in hs],
-            "k-",
+            "-",
+            color=color,
             label=f"deg{poly_deg}~$\\mathcal{{O}}({fit.slope:.2f})$",
         )
         plt.legend()
-        plt.loglog(
-            [res.N**-0.5 for res in results], [res.error for res in results], "k."
-        )
 
     plt.title(f"f={test_func}")
     plt.ylabel("Relative Error")
-    plt.xlabel("$N^{-1/2}$")
+    plt.xlabel("$h$")
     plt.gca().xaxis.set_major_formatter(ScalarFormatter())
     plt.gca().xaxis.set_minor_formatter(NullFormatter())
-    plt.xticks()
-    plt.xticks([n**-0.5 for n in Ns[::4]], [f"${n}^{{-1/2}}$" for n in Ns[::4]])
 
     plt.savefig(f"media/torus_{test_func}.png")
