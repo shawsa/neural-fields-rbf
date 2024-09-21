@@ -42,7 +42,14 @@ X, Y = np.meshgrid(np.linspace(0, 1, sample_density), np.linspace(0, 1, sample_d
 
 print("Generating random points.")
 np.random.seed(0)
-rand_points = UnitSquare(n, verbose=True).points
+unit_square = UnitSquare(n, verbose=True, edge_cluster=False)
+# cluster top and bottom edges
+shift_points = unit_square.inner[:, 1] - 0.5  # just the y
+edge_distance = 0.5 - np.max(np.abs(shift_points))
+factor = (0.5 - edge_distance / 2) / (0.5 - edge_distance)
+unit_square.inner[:, 1] = shift_points * factor + 0.5
+rand_points = unit_square.points
+
 print("Computing random point quadrature.")
 qf_rand = LocalQuad(rand_points, rbf, poly_deg, stencil_size, verbose=True)
 print("Computing random point spatial error.")
@@ -61,6 +68,9 @@ print(f"max_error={np.max(np.abs(err_hex)):.3E}")
 # Figure
 #
 #############
+
+# Panel A
+
 
 print("Generating Figure.")
 figsize = (8.5, 11)
