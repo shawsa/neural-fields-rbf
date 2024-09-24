@@ -2,12 +2,12 @@
 Test convergence using pregenerated quadrature formulae.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from matplotlib.colors import TABLEAU_COLORS
-from matplotlib.ticker import NullFormatter, ScalarFormatter
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
+import json
 from scipy.spatial import Delaunay
 from scipy.stats import linregress
 import sympy as sym
@@ -16,13 +16,12 @@ from tqdm import tqdm
 from rbf.geometry import delaunay_covering_radius_stats
 from rbf.quadrature import LocalQuad
 from rbf.points import UnitSquare
-from rbf.rbf import RBF, PHS
+from rbf.rbf import PHS
 from utils import hex_stencil_min
 
 
-DATA_FILE = "data/flat_quad_convergence.pickle"
+DATA_FILE = "data/flat_quad_convergence.json"
 SAVE_DATA = True
-MEDIA_FILE_NAME = "media/flat_quad_convergence"
 
 colors = {deg: color for deg, color in zip(range(10), TABLEAU_COLORS.keys())}
 plt.rcParams.update(
@@ -51,13 +50,14 @@ def cheb5(x):
 # sym_func = cheb7(2*x - 1) * cheb7(2*y - 1) + 1,
 sym_func = cheb5(2 * x - 1) * cheb4(2 * y - 1) + 1
 exact = float(sym.integrate(sym.integrate(sym_func, (x, 0, 1)), (y, 0, 1)))
+test_func_str = "$T_5(2x-1) T_4(2y - 1) + 1$"
 
 
 @dataclass
 class Result:
     N: int
     h: float
-    rbf: RBF
+    rbf: str
     poly_deg: int
     stencil_size: int
     test_func: str
@@ -70,7 +70,7 @@ poly_degs = list(range(5))
 stencil_size = hex_stencil_min(21)
 print(f"{stencil_size=}")
 repeats = 5
-Ns = list(map(int, np.logspace(np.log10(5_000), np.log10(10_000), 11)))
+Ns = list(map(int, np.logspace(np.log10(5_000), np.log10(100_000), 11)))
 
 
 test_func = sym.lambdify((x, y), sym_func)
@@ -112,24 +112,26 @@ for trial in (tqdm_trial := tqdm(range(repeats), position=1, leave=True)):
             result = Result(
                 N=N,
                 h=h,
-                rbf=rbf,
+                rbf=str(rbf),
                 poly_deg=poly_deg,
                 stencil_size=stencil_size,
                 approx=approx,
                 error=error,
-                test_func=str(sym_func),
+                test_func=test_func_str
             )
             results.append(result)
             tqdm_trial.set_description(f"{trial=}, {N=}, {poly_deg=}, {error=:.3E}")
 
 if SAVE_DATA:
-    with open(DATA_FILE, "wb") as f:
-        pickle.dump(results, f)
+    results_dicts = [asdict(result) for result in results]
+    with open(DATA_FILE, "w") as f:
+        json.dump(results_dicts, f)
 
 if False:
     # for REPL use
-    with open(DATA_FILE, "rb") as f:
-        results = pickle.load(f)
+    with open(DATA_FILE, "r") as f:
+        results = json.load(f)
+    results = [Result(**result) for result in results]
 
 plt.figure()
 for poly_deg in poly_degs:
