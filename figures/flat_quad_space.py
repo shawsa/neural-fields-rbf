@@ -3,6 +3,7 @@ Run convergence Tests for number of points
 """
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import colormaps
+from matplotlib.colors import Normalize
 import matplotlib.gridspec as gs
 import numpy as np
 from rbf.quadrature import LocalQuad
@@ -73,11 +74,12 @@ print(f"max_error={np.max(np.abs(err_hex)):.3E}")
 print("Generating Figure.")
 figsize = (8.5, 12)
 fig = plt.figure("quad_space_error", figsize=figsize)
-grid = gs.GridSpec(4, 11)
-lcol = slice(1, 5)
-rcol = slice(6, 10)
+grid = gs.GridSpec(4, 12)
+lcol = slice(0, 4)
+mcol = slice(4, 8)
+rcol = slice(8, 12)
 
-# Panel A
+# panel A
 center = np.array([0.35, 0.75])
 exact = bump.integrate()
 approx = sum(
@@ -99,23 +101,8 @@ ax_test_func.axis("off")
 # ax_test_func.set_ylabel("$y$")
 # ax_test_func.yticks([])
 
-# Panel B
-ax_point_error = fig.add_subplot(grid[0, rcol])
-cmap = colormaps["jet"]
-min_err = np.min(err_rand)
-max_err = np.max(err_rand)
-color = cmap((error - min_err) / (max_err - min_err))
-plt.plot(*center, ".", color=color)
-plt.plot([0, 1, 1, 0, 0], [0, 0, 1, 1, 0], "k-")
-plt.title(f"$E{tuple(center)}={error:.3f}$")
-ax_point_error.set_xlabel("$x_0$")
-ax_point_error.set_ylabel("$y_0$")
-plt.axis("equal")
-plt.axis("off")
-
-
-# Panel C
-ax_rand_space = fig.add_subplot(grid[1, lcol])
+# panel B
+ax_rand_space = fig.add_subplot(grid[0, mcol])
 error_plot = ax_rand_space.pcolormesh(X, Y, err_rand, cmap="jet")
 ax_rand_space.triplot(*rand_points.T, qf_rand.mesh.simplices, linewidth=0.2)
 # ax_rand_space.plot(*center, "k*")
@@ -128,8 +115,13 @@ ax_rand_space.set_title("Relative Error")
 ax_rand_space.set_xlabel("$x_0$")
 ax_rand_space.set_ylabel("$y_0$")
 
-# Panel D
-ax_rand_log_space = fig.add_subplot(grid[1, rcol])
+ax_rand_space.axis("off")
+ax_rand_space.text(-0.05, 1.0, "1")
+ax_rand_space.text(-0.1, 0.5, "$y_0$", transform=ax_rand_space.transAxes)
+ax_rand_space.text(0.5, -0.1, "$x_0$", transform=ax_rand_space.transAxes)
+
+# Panel C
+ax_rand_log_space = fig.add_subplot(grid[0, rcol])
 log_error_plot = ax_rand_log_space.pcolormesh(
     X, Y, np.log10(np.abs(err_rand)), cmap="jet"
 )
@@ -159,7 +151,12 @@ ax_weights.set_ylabel("$y$")
 
 # Panel F
 ax_hist = fig.add_subplot(grid[2, rcol])
-ax_hist.hist(qf_rand.weights, bins=25)
+_, bins, patches = ax_hist.hist(qf_rand.weights, bins=25, orientation="horizontal")
+cnorm = Normalize(np.min(qf_rand.weights), np.max(qf_rand.weights))
+for val, patch in zip(bins, patches):
+    patch.set_facecolor(plt.cm.jet(cnorm(val)))
+
+
 ax_hist.set_title("Histogram of Weights")
 ax_hist.set_xlabel("weights")
 ax_hist.set_xticks([0, 0.0005, 0.001])
@@ -201,7 +198,6 @@ subplot_label_font = {
 for ax, label in zip(
     [
         ax_test_func,
-        ax_point_error,
         ax_rand_space,
         ax_rand_log_space,
         ax_weights,
