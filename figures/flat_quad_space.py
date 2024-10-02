@@ -72,21 +72,34 @@ print(f"max_error={np.max(np.abs(err_hex)):.3E}")
 #############
 
 print("Generating Figure.")
-figsize = (8.5, 12)
+figsize = (8, 10)
 fig = plt.figure("quad_space_error", figsize=figsize)
-grid = gs.GridSpec(4, 12)
-lcol = slice(0, 4)
-mcol = slice(4, 8)
-rcol = slice(8, 12)
 
-# panel A
+grid = gs.GridSpec(23, 24)
+
+lcol = slice(0, 8)
+lbar = slice(8, 9)
+rcol = slice(12, 20)
+rbar = slice(20, 21)
+
+weights_col = slice(9, 17)
+hist_col = slice(17, 24)
+
+row1 = slice(0, 7)
+row2 = slice(8, 15)
+row3 = slice(16, 23)
+
+y_label_loc = (-0.07, 0.5)
+x_label_loc = (0.5, -0.03)
+
+# test func
+ax_test_func = fig.add_subplot(grid[row1, lcol])
 center = np.array([0.35, 0.75])
 exact = bump.integrate()
 approx = sum(
     w * bump(*(point - center)) for w, point in zip(qf_rand.weights, rand_points)
 )
 error = (approx - exact) / exact
-ax_test_func = fig.add_subplot(grid[0, lcol])
 ax_test_func.triplot(*rand_points.T, qf_rand.mesh.simplices, linewidth=0.2)
 test_func = ax_test_func.pcolormesh(
     X, Y, bump(X - center[0], Y - center[1]), cmap="jet"
@@ -96,44 +109,12 @@ ax_test_func.set_ylim(0, 1)
 ax_test_func.axis("equal")
 ax_test_func.set_title("$f_{%s}$" % str(tuple(center)))
 ax_test_func.axis("off")
-# ax_test_func.set_xlabel("$x$")
-# ax_test_func.xticks([])
-# ax_test_func.set_ylabel("$y$")
-# ax_test_func.yticks([])
 
-# panel B
-ax_rand_space = fig.add_subplot(grid[0, mcol])
-error_plot = ax_rand_space.pcolormesh(X, Y, err_rand, cmap="jet")
-ax_rand_space.triplot(*rand_points.T, qf_rand.mesh.simplices, linewidth=0.2)
-# ax_rand_space.plot(*center, "k*")
-ax_rand_space.plot(*rand_points.T, "k.", markersize=0.5)
-ax_rand_space.set_xlim(0, 1)
-ax_rand_space.set_ylim(0, 1)
-error_color = plt.colorbar(error_plot, ax=ax_rand_space)
-ax_rand_space.axis("equal")
-ax_rand_space.set_title("Relative Error")
-ax_rand_space.set_xlabel("$x_0$")
-ax_rand_space.set_ylabel("$y_0$")
+ax_test_func.text(*x_label_loc, "$x$", transform=ax_test_func.transAxes)
+ax_test_func.text(*y_label_loc, "$y$", transform=ax_test_func.transAxes)
 
-ax_rand_space.axis("off")
-ax_rand_space.text(-0.05, 1.0, "1")
-ax_rand_space.text(-0.1, 0.5, "$y_0$", transform=ax_rand_space.transAxes)
-ax_rand_space.text(0.5, -0.1, "$x_0$", transform=ax_rand_space.transAxes)
-
-# Panel C
-ax_rand_log_space = fig.add_subplot(grid[0, rcol])
-log_error_plot = ax_rand_log_space.pcolormesh(
-    X, Y, np.log10(np.abs(err_rand)), cmap="jet"
-)
-ax_rand_log_space.set_xlim(0, 1)
-ax_rand_log_space.set_ylim(0, 1)
-log_error_color = plt.colorbar(log_error_plot, ax=ax_rand_log_space)
-ax_rand_log_space.axis("equal")
-ax_rand_log_space.set_title("Log10 Relative Error")
-ax_rand_log_space.set_xlabel("$x_0$")
-
-# Panel E
-ax_weights = fig.add_subplot(grid[2, lcol])
+# weights
+ax_weights = fig.add_subplot(grid[row1, weights_col])
 neg_mask = qf_rand.weights < 0
 neg_style = {
     "marker": ".",
@@ -143,52 +124,105 @@ neg_style = {
 }
 weight_color = ax_weights.scatter(*rand_points.T, c=qf_rand.weights, cmap="jet", s=1)
 ax_weights.plot(*rand_points[neg_mask].T, **neg_style)
-weight_color_bar = plt.colorbar(weight_color, ax=ax_weights)
+ax_weights.set_ylim(0, 1)
 ax_weights.axis("equal")
+ax_weights.axis("off")
 ax_weights.set_title("Weights")
-ax_weights.set_xlabel("$x$")
-ax_weights.set_ylabel("$y$")
 
-# Panel F
-ax_hist = fig.add_subplot(grid[2, rcol])
+ax_weights.text(*y_label_loc, "$y$", transform=ax_weights.transAxes)
+ax_weights.text(*x_label_loc, "$x$", transform=ax_weights.transAxes)
+
+# ax_weights_bar = fig.add_subplot(grid[row1, 8])
+# weight_color_bar = plt.colorbar(weight_color, cax=ax_weights_bar)
+
+# histogram
+ax_hist = fig.add_subplot(grid[row1, hist_col])
 _, bins, patches = ax_hist.hist(qf_rand.weights, bins=25, orientation="horizontal")
 cnorm = Normalize(np.min(qf_rand.weights), np.max(qf_rand.weights))
 for val, patch in zip(bins, patches):
     patch.set_facecolor(plt.cm.jet(cnorm(val)))
 
+ax_hist.axis("off")
+ax_hist.text(20, 0, "0")
+ax_hist.text(20, 5e-4, "0.0005")
+ax_hist.text(20, 9e-4, "0.0009")
 
-ax_hist.set_title("Histogram of Weights")
-ax_hist.set_xlabel("weights")
-ax_hist.set_xticks([0, 0.0005, 0.001])
 
-# Panel G
-ax_hex_space = fig.add_subplot(grid[3, lcol])
+# rand error
+ax_rand_space = fig.add_subplot(grid[row2, lcol])
+error_plot = ax_rand_space.pcolormesh(X, Y, err_rand, cmap="jet")
+ax_rand_space.triplot(*rand_points.T, qf_rand.mesh.simplices, linewidth=0.2)
+# ax_rand_space.plot(*center, "k*")
+ax_rand_space.plot(*rand_points.T, "k.", markersize=0.5)
+ax_rand_space.set_xlim(0, 1)
+ax_rand_space.set_ylim(0, 1)
+
+ax_rand_error_cbar = fig.add_subplot(grid[row2, lbar])
+error_color = plt.colorbar(error_plot, cax=ax_rand_error_cbar)
+
+ax_rand_space.axis("equal")
+ax_rand_space.set_title("Relative Error")
+
+ax_rand_space.axis("off")
+ax_rand_space.text(*x_label_loc, "$x_0$", transform=ax_rand_space.transAxes)
+ax_rand_space.text(*y_label_loc, "$y_0$", transform=ax_rand_space.transAxes)
+
+# rand log error
+ax_rand_log_space = fig.add_subplot(grid[row2, rcol])
+log_error_plot = ax_rand_log_space.pcolormesh(
+    X, Y, np.log10(np.abs(err_rand)), cmap="jet"
+)
+ax_rand_log_space.set_xlim(0, 1)
+ax_rand_log_space.set_ylim(0, 1)
+
+ax_rand_log_space_cbar = fig.add_subplot(grid[row2, rbar])
+log_error_color = plt.colorbar(log_error_plot, cax=ax_rand_log_space_cbar)
+ax_rand_log_space.axis("equal")
+ax_rand_log_space.set_title("Log10 Relative Error")
+ax_rand_log_space.set_xlabel("$x_0$")
+
+ax_rand_log_space.axis("off")
+ax_rand_log_space.text(*x_label_loc, "$x_0$", transform=ax_rand_log_space.transAxes)
+ax_rand_log_space.text(*y_label_loc, "$y_0$", transform=ax_rand_log_space.transAxes)
+
+# hex error
+ax_hex_space = fig.add_subplot(grid[row3, lcol])
 error_plot = ax_hex_space.pcolormesh(X, Y, err_hex, cmap="jet")
 ax_hex_space.triplot(*hex_points.T, qf_hex.mesh.simplices, linewidth=0.2)
 ax_hex_space.plot(*hex_points.T, "k.", markersize=0.5)
 ax_hex_space.set_xlim(0, 1)
 ax_hex_space.set_ylim(0, 1)
-error_color = plt.colorbar(error_plot, ax=ax_hex_space)
+
+ax_hex_space_bar = fig.add_subplot(grid[row3, lbar])
+error_color = plt.colorbar(error_plot, cax=ax_hex_space_bar)
 ax_hex_space.axis("equal")
+ax_hex_space.axis("off")
 ax_hex_space.set_title("Relative Error")
-ax_hex_space.set_xlabel("$x_0$")
-ax_hex_space.set_ylabel("$y_0$")
+
+ax_hex_space.text(*x_label_loc, "$x_0$", transform=ax_hex_space.transAxes)
+ax_hex_space.text(*y_label_loc, "$y_0$", transform=ax_hex_space.transAxes)
 
 # Panel H
-ax_hex_log_space = fig.add_subplot(grid[3, rcol])
+ax_hex_log_space = fig.add_subplot(grid[row3, rcol])
 log_error_plot = ax_hex_log_space.pcolormesh(
     X, Y, np.log10(np.abs(err_hex)), cmap="jet"
 )
 ax_hex_log_space.set_xlim(0, 1)
 ax_hex_log_space.set_ylim(0, 1)
-log_error_color = plt.colorbar(log_error_plot, ax=ax_hex_log_space)
+
+ax_hex_log_space_bar = fig.add_subplot(grid[row3, rbar])
+log_error_color = plt.colorbar(log_error_plot, cax=ax_hex_log_space_bar)
 ax_hex_log_space.axis("equal")
+ax_hex_log_space.axis("off")
 ax_hex_log_space.set_title("Log10 Relative Error")
-ax_hex_log_space.set_xlabel("$x_0$")
+
+ax_hex_log_space.text(*y_label_loc, "$y_0$", transform=ax_hex_log_space.transAxes)
+ax_hex_log_space.text(*x_label_loc, "$x_0$", transform=ax_hex_log_space.transAxes)
+
 
 # Panel labels
-subplot_label_x = -0.1
-subplot_label_y = 1.1
+subplot_label_x = -0.05
+subplot_label_y = 1.05
 subplot_label_font = {
     "size": "x-large",
     "weight": "bold",
@@ -198,10 +232,9 @@ subplot_label_font = {
 for ax, label in zip(
     [
         ax_test_func,
+        ax_weights,
         ax_rand_space,
         ax_rand_log_space,
-        ax_weights,
-        ax_hist,
         ax_hex_space,
         ax_hex_log_space,
     ],
@@ -215,7 +248,7 @@ for ax, label in zip(
         **subplot_label_font,
     )
 
-plt.suptitle("Relative Error and RBF-QF weights on the Unit Square")
+plt.suptitle("RBF-QF on the Unit Square")
 
 grid.tight_layout(fig)
 plt.show()
