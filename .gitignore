@@ -13,3 +13,5 @@ Manuscript/manuscript.synctex.gz
 *.thm
 
 *.gif
+
+*.pyc
