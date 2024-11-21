@@ -97,7 +97,20 @@ class NeuralFieldSparse(NeuralField):
             indptr.append(len(data))
 
         self.conv_mat = csr_array((data, indices, indptr), shape=shape)
-        self.fill = 100 * self.conv_mat.nnz / len(self.points)**2
+        self.fill = 100 * self.conv_mat.nnz / len(self.points) ** 2
+
+
+class NeuralFieldMemMin(NeuralField):
+    def initialize_convolution(self, verbose: bool = False, tqdm_kwargs={}):
+        pass
+
+    def conv(self, arr: np.ndarray):
+        ret = np.empty_like(arr)
+        for index, x in enumerate(self.points):
+            ret[index] = self.qf.weights @ (
+                self.weight_kernel(self.dist(self.points, x)) * arr
+            )
+        return ret
 
 
 if __name__ == "__main__":

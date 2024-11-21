@@ -1,3 +1,4 @@
+from itertools import product
 import numpy as np
 import sympy as sym
 from numpy.fft import fft2, ifft2
@@ -18,82 +19,6 @@ class ManufacturedSigmoidFiring:
 
     def inv(self, f: np.ndarray[float], log=np.log) -> np.ndarray[float]:
         return -log(1 / f - 1) / self.gain + self.threshold
-
-
-class ManufacturedHermiteFiring:
-    """
-    Smooth at threshold +/- radius for 3 derivatives.
-    The same as HermiteBump with order = 3.
-    Efficient and accurate computation of inverse (unlike HermiteBump).
-
-    This didn't work. It should be removed from here, but I'm not sure where to put it.
-    """
-
-    def __init__(
-        self,
-        *,
-        threshold: float,
-        radius: float,
-    ):
-        self.radius = radius
-        self.threshold = threshold
-
-        self.lower = self.threshold - self.radius
-        self.upper = self.threshold + self.radius
-
-    def affine(self, r):
-        return (r - self.lower) / (2 * self.radius)
-
-    def affine_inv(self, r):
-        return r * (2 * self.radius) + self.lower
-
-    def foo(self, r):
-        return r**3 * (6 * (r - 5 / 4) ** 2 + 5 / 8)
-
-    def dfoo(self, r):
-        return 3 * r**2 * (6 * (r - 5 / 4) ** 2 + 5 / 8) + r**3 * (12 * (r - 5 / 4))
-
-    def newton_find(self, f):
-        x = (f - 0.5) / self.dfoo(0.5) + 0.5
-        for _ in range(10):
-            x -= (self.foo(x) - f) / self.dfoo(x)
-        return x
-
-    def root_find(self, f):
-        x = 1e-1
-        for _ in range(10):
-            x = (f / (6 * (x - 5 / 4) ** 2 + 5 / 8)) ** (1 / 3)
-        return x
-
-    def __call__(self, rs: np.ndarray[float]):
-        ret = np.zeros_like(rs)
-        ret[rs >= self.upper] = 1
-        poly_mask = np.logical_and(rs > self.lower, rs < self.upper)
-        ret[poly_mask] = self.foo(self.affine(rs[poly_mask]))
-        return ret
-
-    def foo_inv(self, ys: np.ndarray[float]):
-        newton_cutoff = 7e-5  # Hand tuned - lower than this Newton becomes inaccurate.
-        xs = np.empty_like(ys)
-        # upper saturation
-        mask = ys >= 1
-        xs[mask] = 1
-        # lower saturation
-        mask = ys <= 0
-        xs[mask] = 0
-        # middle use newton
-        mask = np.logical_and(ys >= newton_cutoff, ys <= 1 - newton_cutoff)
-        xs[mask] = self.newton_find(ys[mask])
-        # close to 0, use fixed point
-        mask = np.logical_and(ys > 0.0, ys < newton_cutoff)
-        xs[mask] = self.root_find(ys[mask])
-        # close to 1, use fixed point
-        mask = np.logical_and(ys < 1.0, ys > 1 - newton_cutoff)
-        xs[mask] = 1 - self.root_find(1 - ys[mask])
-        return xs
-
-    def inv(self, ys: np.ndarray[float]):
-        return self.affine_inv(self.foo_inv(ys))
 
 
 def gauss(X, Y, x0, y0, sigma, pi=np.pi, exp=np.exp):
@@ -169,23 +94,91 @@ class ManufacturedSolution:
         )
 
 
+class ManufacturedSolutionPeriodic:
+    """Solution is f^{-1}[Gaussian(x, y, t) + epsilon]."""
+
+    def __init__(
+        self,
+        *,
+        weight_kernel_sd: float,
+        threshold: float,
+        gain: float,
+        epsilon: float,
+        solution_sd: float,
+        path_radius: float,
+        period: float,
+        num_tiles: int = 1,
+    ):
+        self.weight_kernel_sd = weight_kernel_sd
+        self.firing = ManufacturedSigmoidFiring(threshold=threshold, gain=gain)
+        self.solution_sd = solution_sd
+        self.path_radius = path_radius
+        self.epsilon = epsilon
+        self.period = period
+        self.num_tiles = num_tiles
+
+        x, y, t = sym.symbols("x y t")
+        center_x = self.path_radius * sym.cos(t)
+        center_y = self.path_radius * sym.sin(t)
+
+        self.center_x_num = sym.lambdify(t, center_x)
+        self.center_y_num = sym.lambdify(t, center_y)
+
+        self.sol = self.firing.inv(
+            sum(
+                gauss(
+                    x,
+                    y,
+                    center_x + self.period * x_tile_index,
+                    center_y + self.period * y_tile_index,
+                    solution_sd,
+                    pi=sym.pi,
+                    exp=sym.exp,
+                )
+                for x_tile_index, y_tile_index in product(
+                    *2 * (range(-self.num_tiles, self.num_tiles + 1),)
+                )
+            )
+            + self.epsilon,
+            log=sym.log,
+        )
+
+        self.sol_dt = self.sol.diff(t)
+
+        self.sol_num = sym.lambdify((x, y, t), self.sol)
+        self.sol_dt_num = sym.lambdify((x, y, t), self.sol_dt)
+
+    def exact(self, X: np.ndarray[float], Y: np.ndarray[float], t: float):
+        return self.sol_num(X, Y, t)
+
+    def dt(self, X: np.ndarray[float], Y: np.ndarray[float], t: float):
+        return self.sol_dt_num(X, Y, t)
+
+    def rhs(self, X, Y, t):
+        return (
+            self.dt(X, Y, t)
+            + self.exact(X, Y, t)
+            - sum(
+                gauss_conv(
+                    X,
+                    Y,
+                    x_tile_index * self.period,
+                    y_tile_index * self.period,
+                    self.weight_kernel_sd,
+                    self.center_x_num(t),
+                    self.center_y_num(t),
+                    self.solution_sd,
+                )
+                for x_tile_index, y_tile_index in product(
+                    *2 * (range(-self.num_tiles, self.num_tiles + 1),)
+                )
+            )
+            - self.epsilon
+        )
+
+
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-
-    # test firing rate
-
-    f = ManufacturedHermiteFiring(threshold=0.3, radius=0.1)
-
-    xs = np.linspace(0, 1, 201)
-    ys = f(xs)
-    plt.figure("Firing rate inverse test.")
-    plt.plot(xs, ys)
-    plt.plot(f.inv(ys), ys)
-
-    zs = np.linspace(f.lower, f.upper, 2001)
-    err = zs - f.inv(f(zs))
-    plt.figure("Firing rate inverse error.")
-    plt.semilogy(zs, np.abs(err))
 
     # test Gaussian Convolve
 

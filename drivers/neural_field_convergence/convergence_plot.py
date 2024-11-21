@@ -32,7 +32,7 @@ for filename in os.listdir(DATA_DIR):
 
 time_step_sizes = set(res.delta_t for res in results)
 for delta_t in time_step_sizes:
-    plt.figure(f"Convergence {delta_t=:.2E}", figsize=(10, 5))
+    plt.figure(f"Convergence {delta_t=:.2E}", figsize=(7, 5))
     for poly_deg in set([res.poly_deg for res in results]):
         color = colors[poly_deg]
         my_res = [
@@ -40,7 +40,7 @@ for delta_t in time_step_sizes:
             for res in results
             if res.poly_deg == poly_deg and res.delta_t == delta_t
         ]
-        my_hs = [1 / np.sqrt(res.N) for res in my_res]
+        my_hs = [res.h for res in my_res]
         my_errs = [res.max_relative_error for res in my_res]
         fit = linregress(np.log(my_hs), np.log(my_errs))
         plt.loglog(my_hs, my_errs, ".", color=color, label=f"{poly_deg=}")
@@ -51,7 +51,7 @@ for delta_t in time_step_sizes:
             color=color,
             label=f"$\\mathcal{{O}}({fit.slope:.2f})$",
         )
-    plt.xlabel("$N^{-1/2}$")
+    plt.xlabel("$h$")
     plt.ylabel("Relative Error")
     plt.grid()
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
