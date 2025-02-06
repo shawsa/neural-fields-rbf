@@ -3,13 +3,13 @@ from matplotlib.colors import TABLEAU_COLORS
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import linregress
+from types import SimpleNamespace
 
-DATA_FILE = "data/flat_quad_convergence.pickle"
+DATA_FILE = "data/flat_quad_convergence.json"
 MEDIA_FILE_NAME = "media/flat_quad_convergence"
 
-
-with open(DATA_FILE, "r") as f:
-    results = json.load(f)
+with open(DATA_FILE, "rb") as f:
+    results = [SimpleNamespace(**d) for d in json.load(f)]
 
 colors = {deg: color for deg, color in zip(range(10), TABLEAU_COLORS.keys())}
 plt.rcParams.update(

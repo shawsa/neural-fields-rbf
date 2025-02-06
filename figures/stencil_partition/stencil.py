@@ -110,4 +110,4 @@ for ax, label in zip(
     )
 
 grid.tight_layout(fig)
-plt.savefig("media/stencil.pdf")
+plt.savefig("../media/stencil.pdf")

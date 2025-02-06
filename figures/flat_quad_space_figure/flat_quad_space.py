@@ -27,7 +27,7 @@ plt.rcParams.update(
     }
 )
 
-FILE = "media/flat_quad_space"
+FILE = "../media/flat_quad_space"
 
 bump_radius = 0.1
 bump = PeriodicTile(Gaussian(bump_radius / 2))
@@ -254,4 +254,4 @@ grid.tight_layout(fig)
 plt.show()
 
 # pdfs do not look right with pcolormaps
-plt.savefig(FILE + ".png", dpi=300, bbox_inches="tight")
+# plt.savefig(FILE + ".png", dpi=300, bbox_inches="tight")

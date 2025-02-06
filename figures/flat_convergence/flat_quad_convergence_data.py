@@ -21,7 +21,7 @@ from utils import hex_stencil_min
 
 
 DATA_FILE = "data/flat_quad_convergence.json"
-SAVE_DATA = True
+SAVE_DATA = False
 
 colors = {deg: color for deg, color in zip(range(10), TABLEAU_COLORS.keys())}
 plt.rcParams.update(
