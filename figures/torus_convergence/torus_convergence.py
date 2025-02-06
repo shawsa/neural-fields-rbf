@@ -43,28 +43,28 @@ class Result:
 
 if __name__ == "__main__":
 
-    DATA_FILE = "data/torrus1.pickle"
+    DATA_FILE = "data/torrus2.pickle"
     SAVE_DATA = True
 
     R, r = 3, 1
     exact = 4 * np.pi**2 * R * r
 
-    # test_func = TestFunc(1 + sym.sin(7 * x))
-    test_func = TestFunc(
-        1
-        + sym.exp(-((x - 2) ** 2) + y**2 + z**2)
-        - sym.exp(-((x + 2) ** 2) + y**2 + z**2)
-    )
+    test_func = TestFunc(1 + sym.sin(7 * x))
+    # test_func = TestFunc(
+    #     1
+    #     + sym.exp(-((x - 2) ** 2) + y**2 + z**2)
+    #     - sym.exp(-((x + 2) ** 2) + y**2 + z**2)
+    # )
 
-    rbf = PHS(6)
-    stencil_size = 50
-    poly_degs = [3]
+    rbf = PHS(10)
+    stencil_size = 36
+    poly_degs = [6]
 
-    repeats = 1
+    repeats = 3
     Ns = np.logspace(
         np.log10(8_000),
-        np.log10(64_000),
-        2,
+        np.log10(32_000),
+        5,
         dtype=int,
     )
 
@@ -115,7 +115,7 @@ if __name__ == "__main__":
                 )
                 results.append(result)
                 tqdm_trial.set_description(
-                    f"f={test_func}, {trial=}, {N=}, {poly_deg=}, {error=:.3E}"
+                    f"{trial=}, {N=}, {poly_deg=}, {error=:.3E}"
                 )
 
     if SAVE_DATA:

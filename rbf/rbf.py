@@ -97,7 +97,7 @@ class EvenPHS(RBF):
         raise NotImplementedError
 
     def __repr__(self):
-        return f"r**{self.deg} * log(r)"
+        return f"r**{self.deg}*log(r)"
 
 
 def PHS(deg: int) -> RBF:

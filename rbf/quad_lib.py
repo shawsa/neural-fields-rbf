@@ -31,25 +31,207 @@ def get_right_triangle_integral_function(rbf: RBF):
     raise ValueError(f"Error: rbf {expr_str} not implemented in quadrature library")
 
 
+def complexlog(a):
+    return np.log(a, dtype="complex")
+
+
 # GENERATED CODE
 
 # r**3
-right_triangle_integrate_dict["r**3"] = lambda a, b:(1/40)*a**2*(3*a**3*np.arcsinh(b/a) + 5*a**2*b*np.sqrt(1 + b**2/a**2) + 2*b**3*np.sqrt(1 + b**2/a**2))
+right_triangle_integrate_dict["r**3"] = lambda a, b: (
+    (1 / 40)
+    * a**2
+    * (
+        3 * a**3 * np.arcsinh(b / a)
+        + 5 * a**2 * b * np.sqrt(1 + b**2 / a**2)
+        + 2 * b**3 * np.sqrt(1 + b**2 / a**2)
+    )
+).real
 
 # r**5
-right_triangle_integrate_dict["r**5"] = lambda a, b:(1/336)*a**2*(15*a**5*np.arcsinh(b/a) + 33*a**4*b*np.sqrt(1 + b**2/a**2) + 26*a**2*b**3*np.sqrt(1 + b**2/a**2) + 8*b**5*np.sqrt(1 + b**2/a**2))
+right_triangle_integrate_dict["r**5"] = lambda a, b: (
+    (1 / 336)
+    * a**2
+    * (
+        15 * a**5 * np.arcsinh(b / a)
+        + 33 * a**4 * b * np.sqrt(1 + b**2 / a**2)
+        + 26 * a**2 * b**3 * np.sqrt(1 + b**2 / a**2)
+        + 8 * b**5 * np.sqrt(1 + b**2 / a**2)
+    )
+).real
 
 # r**7
-right_triangle_integrate_dict["r**7"] = lambda a, b:(1/3456)*a**2*(105*a**7*np.arcsinh(b/a) + 279*a**6*b*np.sqrt(1 + b**2/a**2) + 326*a**4*b**3*np.sqrt(1 + b**2/a**2) + 200*a**2*b**5*np.sqrt(1 + b**2/a**2) + 48*b**7*np.sqrt(1 + b**2/a**2))
+right_triangle_integrate_dict["r**7"] = lambda a, b: (
+    (1 / 3456)
+    * a**2
+    * (
+        105 * a**7 * np.arcsinh(b / a)
+        + 279 * a**6 * b * np.sqrt(1 + b**2 / a**2)
+        + 326 * a**4 * b**3 * np.sqrt(1 + b**2 / a**2)
+        + 200 * a**2 * b**5 * np.sqrt(1 + b**2 / a**2)
+        + 48 * b**7 * np.sqrt(1 + b**2 / a**2)
+    )
+).real
 
 # r**9
-right_triangle_integrate_dict["r**9"] = lambda a, b:(1/14080)*a**2*(315*a**9*np.arcsinh(b/a) + 965*a**8*b*np.sqrt(1 + b**2/a**2) + 1490*a**6*b**3*np.sqrt(1 + b**2/a**2) + 1368*a**4*b**5*np.sqrt(1 + b**2/a**2) + 656*a**2*b**7*np.sqrt(1 + b**2/a**2) + 128*b**9*np.sqrt(1 + b**2/a**2))
+right_triangle_integrate_dict["r**9"] = lambda a, b: (
+    (1 / 14080)
+    * a**2
+    * (
+        315 * a**9 * np.arcsinh(b / a)
+        + 965 * a**8 * b * np.sqrt(1 + b**2 / a**2)
+        + 1490 * a**6 * b**3 * np.sqrt(1 + b**2 / a**2)
+        + 1368 * a**4 * b**5 * np.sqrt(1 + b**2 / a**2)
+        + 656 * a**2 * b**7 * np.sqrt(1 + b**2 / a**2)
+        + 128 * b**9 * np.sqrt(1 + b**2 / a**2)
+    )
+).real
 
 # r**11
-right_triangle_integrate_dict["r**11"] = lambda a, b:(1/199680)*a**2*(3465*a**11*np.arcsinh(b/a) + 11895*a**10*b*np.sqrt(1 + b**2/a**2) + 22790*a**8*b**3*np.sqrt(1 + b**2/a**2) + 27848*a**6*b**5*np.sqrt(1 + b**2/a**2) + 20016*a**4*b**7*np.sqrt(1 + b**2/a**2) + 7808*a**2*b**9*np.sqrt(1 + b**2/a**2) + 1280*b**11*np.sqrt(1 + b**2/a**2))
+right_triangle_integrate_dict["r**11"] = lambda a, b: (
+    (1 / 199680)
+    * a**2
+    * (
+        3465 * a**11 * np.arcsinh(b / a)
+        + 11895 * a**10 * b * np.sqrt(1 + b**2 / a**2)
+        + 22790 * a**8 * b**3 * np.sqrt(1 + b**2 / a**2)
+        + 27848 * a**6 * b**5 * np.sqrt(1 + b**2 / a**2)
+        + 20016 * a**4 * b**7 * np.sqrt(1 + b**2 / a**2)
+        + 7808 * a**2 * b**9 * np.sqrt(1 + b**2 / a**2)
+        + 1280 * b**11 * np.sqrt(1 + b**2 / a**2)
+    )
+).real
 
 # r**2*log(r)
-right_triangle_integrate_dict["r**2*log(r)"] = lambda a, b:(1/144)*a*(12*a**3*(-1j*np.log((-a - 1j*b)/a) + 1j*np.log((a - 1j*b)/a) - np.pi) + 3*a**2*b*(6*np.log((-a**2 - b**2)/a**2) - 11) - b**3*(7 - 6*np.log((-a**2 - b**2)/a**2)) + 12*b*(3*a**2 + b**2)*np.log(1j*a))
+right_triangle_integrate_dict["r**2*log(r)"] = lambda a, b: (
+    (1 / 144)
+    * a
+    * (
+        12
+        * a**3
+        * (
+            -1j * complexlog((-a - 1j * b) / a)
+            + 1j * complexlog((a - 1j * b) / a)
+            - np.pi
+        )
+        + 3 * a**2 * b * (6 * complexlog((-(a**2) - b**2) / a**2) - 11)
+        - b**3 * (7 - 6 * complexlog((-(a**2) - b**2) / a**2))
+        + 12 * b * (3 * a**2 + b**2) * complexlog(1j * a)
+    )
+).real
 
 # r**4*log(r)
-right_triangle_integrate_dict["r**4*log(r)"] = lambda a, b:(1/900)*a*(40*a**5*(-1j*np.log((-a - 1j*b)/a) + 1j*np.log((a - 1j*b)/a) - np.pi) + 15*a**4*b*(5*np.log((-a**2 - b**2)/a**2) - 7) + 10*a**2*b**3*(5*np.log((-a**2 - b**2)/a**2) - 4) + b**5*(15*np.log((-a**2 - b**2)/a**2) - 11) + 10*b*(15*a**4 + 10*a**2*b**2 + 3*b**4)*np.log(1j*a))
+right_triangle_integrate_dict["r**4*log(r)"] = lambda a, b: (
+    (1 / 900)
+    * a
+    * (
+        40
+        * a**5
+        * (
+            -1j * complexlog((-a - 1j * b) / a)
+            + 1j * complexlog((a - 1j * b) / a)
+            - np.pi
+        )
+        + 15 * a**4 * b * (5 * complexlog((-(a**2) - b**2) / a**2) - 7)
+        + 10 * a**2 * b**3 * (5 * complexlog((-(a**2) - b**2) / a**2) - 4)
+        + b**5 * (15 * complexlog((-(a**2) - b**2) / a**2) - 11)
+        + 10
+        * b
+        * (15 * a**4 + 10 * a**2 * b**2 + 3 * b**4)
+        * complexlog(1j * a)
+    )
+).real
+
+# r**6*log(r)
+right_triangle_integrate_dict["r**6*log(r)"] = lambda a, b: (
+    (1 / 235200)
+    * a
+    * (
+        a**7
+        * (
+            -6720 * 1j * complexlog((-a - 1j * b) / a)
+            + 6720 * 1j * complexlog((a - 1j * b) / a)
+            - 6720 * np.pi
+        )
+        + 105 * a**6 * b * (140 * complexlog((-(a**2) - b**2) / a**2) - 163)
+        + a**4 * b**3 * (14700 * complexlog((-(a**2) - b**2) / a**2) - 8995)
+        + a**2 * b**5 * (8820 * complexlog((-(a**2) - b**2) / a**2) - 4893)
+        + b**7 * (2100 * complexlog((-(a**2) - b**2) / a**2) - 1125)
+        + 840
+        * b
+        * (35 * a**6 + 35 * a**4 * b**2 + 21 * a**2 * b**4 + 5 * b**6)
+        * complexlog(1j * a)
+    )
+).real
+
+# r**8*log(r)
+right_triangle_integrate_dict["r**8*log(r)"] = lambda a, b: (
+    (1 / 1984500)
+    * a
+    * (
+        a**9
+        * (
+            -40320 * 1j * complexlog((-a - 1j * b) / a)
+            + 40320 * 1j * complexlog((a - 1j * b) / a)
+            - 40320 * np.pi
+        )
+        + 315 * a**8 * b * (315 * complexlog((-(a**2) - b**2) / a**2) - 319)
+        + a**6 * b**3 * (132300 * complexlog((-(a**2) - b**2) / a**2) - 65730)
+        + a**4 * b**5 * (119070 * complexlog((-(a**2) - b**2) / a**2) - 53172)
+        + a**2 * b**7 * (56700 * complexlog((-(a**2) - b**2) / a**2) - 24390)
+        + b**9 * (11025 * complexlog((-(a**2) - b**2) / a**2) - 4655)
+        + 630
+        * b
+        * (
+            315 * a**8
+            + 420 * a**6 * b**2
+            + 378 * a**4 * b**4
+            + 180 * a**2 * b**6
+            + 35 * b**8
+        )
+        * complexlog(1j * a)
+    )
+).real
+
+# r**10*log(r)
+right_triangle_integrate_dict["r**10*log(r)"] = lambda a, b: (
+    (1 / 115259760)
+    * a
+    * (
+        a**11
+        * (
+            -1774080 * 1j * complexlog((-a - 1j * b) / a)
+            + 1774080 * 1j * complexlog((a - 1j * b) / a)
+            - 1774080 * np.pi
+        )
+        + 3465 * a**10 * b * (1386 * complexlog((-(a**2) - b**2) / a**2) - 1255)
+        + a**8
+        * b**3
+        * (8004150 * complexlog((-(a**2) - b**2) / a**2) - 3352965)
+        + a**6
+        * b**5
+        * (9604980 * complexlog((-(a**2) - b**2) / a**2) - 3591126)
+        + a**4
+        * b**7
+        * (6860700 * complexlog((-(a**2) - b**2) / a**2) - 2466090)
+        + a**2
+        * b**9
+        * (2668050 * complexlog((-(a**2) - b**2) / a**2) - 940555)
+        + b**11 * (436590 * complexlog((-(a**2) - b**2) / a**2) - 152145)
+        + 13860
+        * b
+        * (
+            693 * a**10
+            + 1155 * a**8 * b**2
+            + 1386 * a**6 * b**4
+            + 990 * a**4 * b**6
+            + 385 * a**2 * b**8
+            + 63 * b**10
+        )
+        * complexlog(1j * a)
+    )
+).real
+
+
+if __name__ == "__main__":
+    test_dict()
