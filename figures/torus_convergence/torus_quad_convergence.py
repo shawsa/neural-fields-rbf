@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import pickle
 import numpy as np
+import math
 from matplotlib.colors import TABLEAU_COLORS
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullFormatter, ScalarFormatter
@@ -36,14 +37,14 @@ class Result:
     rbf: RBF
     poly_deg: int
     stencil_size: int
+    expected_order: int
     test_func: TestFunc
     approx: float
     error: float
 
 
 if __name__ == "__main__":
-
-    DATA_FILE = "data/torrus2.pickle"
+    DATA_FILE = "data/torrus_quad_1.pickle"
     SAVE_DATA = True
 
     R, r = 3, 1
@@ -56,67 +57,69 @@ if __name__ == "__main__":
     #     - sym.exp(-((x + 2) ** 2) + y**2 + z**2)
     # )
 
-    rbf = PHS(10)
-    stencil_size = 36
-    poly_degs = [6]
-
-    repeats = 3
     Ns = np.logspace(
         np.log10(8_000),
-        np.log10(32_000),
-        5,
+        np.log10(16_000),
+        2,
         dtype=int,
     )
 
+    target_orders = [4, 6, 8, 10]
+
     results = []
-    for trial in (tqdm_trial := tqdm(range(repeats), position=1, leave=True)):
-        for N in (tqdm_N := tqdm(Ns[::-1], position=2, leave=False)):
-            tqdm_N.set_description(f"{N=}")
-            for poly_deg in (tqdm_poly_deg := tqdm(poly_degs, position=3, leave=False)):
-                tqdm_poly_deg.set_description(f"{poly_deg=}")
-                torus = SpiralTorus(N, R=R, r=r)
-                N = torus.N
-                points = torus.points
-                valid_surface = False
-                while not valid_surface:
-                    vor = LocalSurfaceVoronoi(
-                        torus.points,
-                        torus.normals,
-                        torus.implicit_surf,
-                    )
-                    trimesh = TriMesh(points, vor.triangles, normals=vor.normals)
-                    valid_surface = trimesh.is_valid()
+    for N in (tqdm_N := tqdm(Ns[::-1], position=1, leave=True)):
+        tqdm_N.set_description(f"{N=} - generating surface...")
+        torus = SpiralTorus(N, R=R, r=r)
+        N = torus.N
+        points = torus.points
+        valid_surface = False
+        while not valid_surface:
+            vor = LocalSurfaceVoronoi(
+                torus.points,
+                torus.normals,
+                torus.implicit_surf,
+            )
+            trimesh = TriMesh(points, vor.triangles, normals=vor.normals)
+            valid_surface = trimesh.is_valid()
 
-                quad = SurfaceQuad(
-                    trimesh=trimesh,
-                    rbf=rbf,
-                    poly_deg=poly_deg,
-                    stencil_size=stencil_size,
-                    verbose=True,
-                    tqdm_kwargs={
-                        "position": 4,
-                        "leave": False,
-                        "desc": "Calculating weights",
-                    },
-                )
+        for target_order in (
+            tqdm_poly_deg := tqdm(target_orders, position=2, leave=False)
+        ):
+            tqdm_poly_deg.set_description(f"{target_order=}")
+            interp_order = target_order + 2
+            rbf = PHS(interp_order)
+            poly_deg = (interp_order - 2) // 2
+            stencil_size = max(12, math.ceil(1.2 * (1 + poly_deg) * poly_deg // 2))
 
-                approx = quad.weights @ test_func(points)
-                error = abs(approx - exact) / exact
+            quad = SurfaceQuad(
+                trimesh=trimesh,
+                rbf=rbf,
+                poly_deg=poly_deg,
+                stencil_size=stencil_size,
+                verbose=True,
+                tqdm_kwargs={
+                    "position": 3,
+                    "leave": False,
+                    "desc": "Calculating weights",
+                },
+            )
 
-                result = Result(
-                    N=N,
-                    h=vor.circum_radius,
-                    rbf=rbf,
-                    poly_deg=poly_deg,
-                    stencil_size=stencil_size,
-                    approx=approx,
-                    error=error,
-                    test_func=str(test_func),
-                )
-                results.append(result)
-                tqdm_trial.set_description(
-                    f"{trial=}, {N=}, {poly_deg=}, {error=:.3E}"
-                )
+            approx = quad.weights @ test_func(points)
+            error = abs(approx - exact) / exact
+
+            result = Result(
+                N=N,
+                h=vor.circum_radius,
+                rbf=rbf,
+                poly_deg=poly_deg,
+                stencil_size=stencil_size,
+                expected_order=target_order,
+                approx=approx,
+                error=error,
+                test_func=str(test_func),
+            )
+            results.append(result)
+            tqdm_N.set_description(f"{N=}, {str(rbf)}, {poly_deg=}, {error=:.3E}")
 
     if SAVE_DATA:
         with open(DATA_FILE, "wb") as f:

@@ -90,11 +90,11 @@ def make_black():
 
 if __name__ == "__main__":
     clear_library()
-    for n in range(3, 12, 2):
+    for n in range(3, 22, 2):
         phi = parser.parse_expr(f"r**{n}")
         add_to_library(phi)
 
-    for n in range(2, 11, 2):
+    for n in range(2, 21, 2):
         phi = parser.parse_expr(f"r**{n}*log(r)")
         add_to_library(phi)
 

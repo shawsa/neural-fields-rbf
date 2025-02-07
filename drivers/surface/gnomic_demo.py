@@ -41,7 +41,7 @@ kdt = KDTree(points)
 
 
 _, stencil = kdt.query(face.center, k=18)
-surf_stencil = SurfaceStencil(face, points[stencil], points[stencil])
+surf_stencil = SurfaceStencil(face, points[stencil], points[stencil], stencil)
 stencil_points = pv.PolyData(points[stencil])
 stencil_map = {value: index for index, value in enumerate(stencil)}
 stencil_mesh = []
@@ -66,7 +66,8 @@ proj_mesh = pv.PolyData(
     projection_points, [(2, 0, i) for i in range(1, len(projection_points))]
 )
 
-plotter = pv.Plotter(off_screen=True)
+# plotter = pv.Plotter(off_screen=True)
+plotter = pv.Plotter(off_screen=False)
 plotter.add_mesh(
     surf,
     scalars=color_arr,
