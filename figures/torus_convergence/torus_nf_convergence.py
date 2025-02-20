@@ -6,8 +6,7 @@ from matplotlib.colors import TABLEAU_COLORS
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullFormatter, ScalarFormatter
 from scipy.stats import linregress
-import sympy as sym
-from sympy.abc import x, y, z
+
 from tqdm import tqdm
 from min_energy_points import LocalSurfaceVoronoi
 from min_energy_points.torus import SpiralTorus
@@ -15,19 +14,21 @@ from min_energy_points.torus import SpiralTorus
 from rbf.rbf import RBF, PHS
 from rbf.surface import TriMesh, SurfaceQuad
 
+from manufactured import (
+    weight_kernel,
+    dist,
+    firing_rate,
+    exact,
+    forcing,
+    cart_to_param,
+)
 
-class TestFunc:
-    def __init__(self, expr):
-        self.expr = expr
-        self.foo = sym.lambdify((x, y, z), expr)
+from odeiter import TimeDomain_Start_Stop_MaxSpacing, RK4
+from odeiter.adams_bashforth import AB5
 
-    def __call__(self, points: np.ndarray[float]) -> np.ndarray[float]:
-        if type(self.expr) in [int, float]:
-            return np.ones(len(points))
-        return self.foo(*points.T)
-
-    def __repr__(self) -> str:
-        return str(self.expr)
+from neural_fields.scattered import (
+    NeuralField,
+)
 
 
 @dataclass
@@ -37,41 +38,38 @@ class Result:
     rbf: RBF
     poly_deg: int
     stencil_size: int
-    expected_order: int
-    test_func: TestFunc
-    approx: float
-    error: float
+    max_err: float
 
 
 if __name__ == "__main__":
-    DATA_FILE = "data/torrus_quad_1.pickle"
+    DATA_FILE = "data/torrus_nf_1.pickle"
     SAVE_DATA = True
 
     R, r = 3, 1
-    exact = 4 * np.pi**2 * R * r
-
-    test_func = TestFunc(1 + sym.sin(7 * x))
-    # test_func = TestFunc(
-    #     1
-    #     + sym.exp(-((x - 2) ** 2) + y**2 + z**2)
-    #     - sym.exp(-((x + 2) ** 2) + y**2 + z**2)
-    # )
 
     Ns = np.logspace(
+        np.log10(1_000),
         np.log10(32_000),
-        np.log10(64_000),
-        5,
+        2,
         dtype=int,
     )
 
-    target_orders = [4, 6, 8, 10]
+    solver = AB5(seed=RK4(), seed_steps_per_step=2)
+    t0, tf = 0, 1
+    time_step_sizes = [1e-4]
+    # Ns = np.logspace(np.log10(1_000), np.log10(5_000), 5, dtype=int)
+    # poly_degs = [1, 2, 3, 4]
+    stencil_size = 24
+    poly_degs = [2]
+    rbf = PHS(3)
 
     results = []
-    for N in (tqdm_N := tqdm(Ns[::-1], position=1, leave=True)):
-        tqdm_N.set_description(f"{N=} - generating surface...")
+    for N in (tqdm_obj := tqdm(Ns[::-1], position=0, leave=True)):
+        tqdm_obj.set_description(f"{N=} - generating surface...")
         torus = SpiralTorus(N, R=R, r=r)
         N = torus.N
         points = torus.points
+        phis, thetas = cart_to_param(points)
         valid_surface = False
         while not valid_surface:
             vor = LocalSurfaceVoronoi(
@@ -82,32 +80,57 @@ if __name__ == "__main__":
             trimesh = TriMesh(points, vor.triangles, normals=vor.normals)
             valid_surface = trimesh.is_valid()
 
-        for target_order in (
-            tqdm_poly_deg := tqdm(target_orders, position=2, leave=False)
-        ):
-            tqdm_poly_deg.set_description(f"{target_order=}")
-            interp_order = target_order + 2
-            rbf = PHS(interp_order)
-            poly_deg = (interp_order + 2) // 2
-            stencil_size = max(
-                12, math.ceil(1.5 * (2 + poly_deg) * (1 + poly_deg) // 2)
-            )
+        for poly_deg in (tqdm_poly_deg := tqdm(poly_degs, position=1, leave=False)):
+            tqdm_poly_deg.set_description(f"{poly_deg=}")
+            # rbf = PHS(max(2, 2 * poly_deg - 2))
+            # stencil_size = max(
+            #     12, math.ceil(1.5 * (2 + poly_deg) * (1 + poly_deg) // 2)
+            # )
 
-            quad = SurfaceQuad(
+            tqdm_obj.set_description(f"{N=}, {poly_deg=} constructing stencil")
+            qf = SurfaceQuad(
                 trimesh=trimesh,
                 rbf=rbf,
                 poly_deg=poly_deg,
                 stencil_size=stencil_size,
                 verbose=True,
                 tqdm_kwargs={
-                    "position": 3,
+                    "position": 2,
                     "leave": False,
                     "desc": "Calculating weights",
                 },
             )
+            tqdm_obj.set_description(f"{N=}, {poly_deg=} constructing conv_mat")
+            nf = NeuralField(
+                qf=qf,
+                firing_rate=firing_rate,
+                weight_kernel=weight_kernel,
+                dist=dist,
+                verbose=True,
+                tqdm_kwargs={"position": 2, "leave": False},
+            )
 
-            approx = quad.weights @ test_func(points)
-            error = abs(approx - exact) / exact
+            def rhs(t, u):
+                return nf.rhs(t, u) + forcing(t, phis, thetas)
+
+            u0 = exact(t0, phis, thetas)
+            for delta_t in tqdm(time_step_sizes, position=2, leave=False):
+                time = TimeDomain_Start_Stop_MaxSpacing(t0, tf, delta_t)
+                max_err = 0
+                tqdm_obj.set_description(
+                    f"{N=}, {delta_t=:.3E}, {poly_deg=} time stepping"
+                )
+                for t, u in (
+                    tqdm_obj_inner := tqdm(
+                        zip(time.array, solver.solution_generator(u0, rhs, time)),
+                        total=len(time.array),
+                        position=2,
+                        leave=False,
+                    )
+                ):
+                    my_exact = exact(t, phis, thetas)
+                    err = np.max(np.abs(u - my_exact) / my_exact)
+                    max_err = max(max_err, err)
 
             result = Result(
                 N=N,
@@ -115,13 +138,10 @@ if __name__ == "__main__":
                 rbf=rbf,
                 poly_deg=poly_deg,
                 stencil_size=stencil_size,
-                expected_order=target_order,
-                approx=approx,
-                error=error,
-                test_func=str(test_func),
+                max_err=max_err,
             )
             results.append(result)
-            tqdm_N.set_description(f"{N=}, {str(rbf)}, {poly_deg=}, {error=:.3E}")
+            tqdm_obj.set_description(f"{N=}, {str(rbf)}, {poly_deg=}, {max_err=:.3E}")
 
     if SAVE_DATA:
         with open(DATA_FILE, "wb") as f:
