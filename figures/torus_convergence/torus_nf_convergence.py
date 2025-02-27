@@ -14,27 +14,25 @@ from min_energy_points.torus import SpiralTorus
 from rbf.rbf import RBF, PHS
 from rbf.surface import TriMesh, SurfaceQuad
 
-from manufactured import (
-    weight_kernel,
-    dist,
-    firing_rate,
-    exact,
-    forcing,
-    cart_to_param,
-)
+from manufactured import ManufacturedSolutionPeriodic
 
 from odeiter import TimeDomain_Start_Stop_MaxSpacing, RK4
 from odeiter.adams_bashforth import AB5
 
+from neural_fields.kernels import Gaussian
 from neural_fields.scattered import (
-    NeuralField,
+    NeuralFieldSparse,
+    FlatTorrusDistance,
 )
+import scipy.sparse
+
+import pyvista as pv
 
 
 @dataclass
 class Result:
     N: int
-    h: float
+    vor_circum: float
     rbf: RBF
     poly_deg: int
     stencil_size: int
@@ -46,30 +44,67 @@ if __name__ == "__main__":
     SAVE_DATA = True
 
     R, r = 3, 1
+    t0, tf = 0, 0.1
+
+    threshold = 0.5
+    gain = 5
+    weight_kernel_sd = 0.025
+    sol_sd = 1.1
+    path_radius = 0.2
+    epsilon = 0.1
+
+    def cart_to_param(points):
+        if points.ndim == 1:
+            x, y, z = points
+        else:
+            x, y, z = points.T
+        phis = np.arctan2(y, x)
+        thetas = np.arctan2(z, np.sqrt(x**2 + y**2) - R)
+        return np.array([phis, thetas]).T
+
+    def param_dist(x, z):
+        return FlatTorrusDistance(x_width=2 * np.pi, y_width=2 * np.pi)(
+            cart_to_param(x), cart_to_param(z)
+        )
+
+    sol = ManufacturedSolutionPeriodic(
+        weight_kernel_sd=weight_kernel_sd,
+        threshold=threshold,
+        gain=gain,
+        solution_sd=sol_sd,
+        path_radius=path_radius,
+        epsilon=epsilon,
+        period=2 * np.pi,
+    )
 
     Ns = np.logspace(
-        np.log10(1_000),
-        np.log10(32_000),
-        2,
+        np.log10(16_000),
+        np.log10(128_000),
+        5,
         dtype=int,
     )
 
     solver = AB5(seed=RK4(), seed_steps_per_step=2)
-    t0, tf = 0, 1
+    # solver = RK4()
+    t0, tf = 0, 0.2
     time_step_sizes = [1e-4]
     # Ns = np.logspace(np.log10(1_000), np.log10(5_000), 5, dtype=int)
     # poly_degs = [1, 2, 3, 4]
     stencil_size = 24
-    poly_degs = [2]
+    poly_degs = [1, 2, 3, 4]
     rbf = PHS(3)
 
     results = []
+    if False:
+        N = 20_000
+        poly_deg = 4
+        delta_2 = 1e-4
     for N in (tqdm_obj := tqdm(Ns[::-1], position=0, leave=True)):
         tqdm_obj.set_description(f"{N=} - generating surface...")
         torus = SpiralTorus(N, R=R, r=r)
         N = torus.N
         points = torus.points
-        phis, thetas = cart_to_param(points)
+        phis, thetas = cart_to_param(points).T
         valid_surface = False
         while not valid_surface:
             vor = LocalSurfaceVoronoi(
@@ -80,7 +115,9 @@ if __name__ == "__main__":
             trimesh = TriMesh(points, vor.triangles, normals=vor.normals)
             valid_surface = trimesh.is_valid()
 
-        for poly_deg in (tqdm_poly_deg := tqdm(poly_degs, position=1, leave=False)):
+        for poly_deg in (
+            tqdm_poly_deg := tqdm(poly_degs[::-1], position=1, leave=False)
+        ):
             tqdm_poly_deg.set_description(f"{poly_deg=}")
             # rbf = PHS(max(2, 2 * poly_deg - 2))
             # stencil_size = max(
@@ -101,19 +138,22 @@ if __name__ == "__main__":
                 },
             )
             tqdm_obj.set_description(f"{N=}, {poly_deg=} constructing conv_mat")
-            nf = NeuralField(
+            nf = NeuralFieldSparse(
                 qf=qf,
-                firing_rate=firing_rate,
-                weight_kernel=weight_kernel,
-                dist=dist,
+                firing_rate=sol.firing,
+                weight_kernel=Gaussian(sigma=weight_kernel_sd).radial,
+                dist=param_dist,
+                sparcity_tolerance=1e-16,
                 verbose=True,
                 tqdm_kwargs={"position": 2, "leave": False},
             )
+            # mult by jacobian
+            nf.conv_mat = nf.conv_mat @ scipy.sparse.diags(1 / (R + r * np.cos(thetas)))
 
             def rhs(t, u):
-                return nf.rhs(t, u) + forcing(t, phis, thetas)
+                return nf.rhs(t, u) + sol.rhs(phis, thetas, t)
 
-            u0 = exact(t0, phis, thetas)
+            u0 = sol.exact(phis, thetas, 0)
             for delta_t in tqdm(time_step_sizes, position=2, leave=False):
                 time = TimeDomain_Start_Stop_MaxSpacing(t0, tf, delta_t)
                 max_err = 0
@@ -128,13 +168,14 @@ if __name__ == "__main__":
                         leave=False,
                     )
                 ):
-                    my_exact = exact(t, phis, thetas)
+                    my_exact = sol.exact(phis, thetas, t)
                     err = np.max(np.abs(u - my_exact) / my_exact)
                     max_err = max(max_err, err)
+                    tqdm_obj_inner.set_description(f"{max_err=:.3E}")
 
             result = Result(
                 N=N,
-                h=vor.circum_radius,
+                vor_circum=vor.circum_radius,
                 rbf=rbf,
                 poly_deg=poly_deg,
                 stencil_size=stencil_size,
@@ -142,6 +183,19 @@ if __name__ == "__main__":
             )
             results.append(result)
             tqdm_obj.set_description(f"{N=}, {str(rbf)}, {poly_deg=}, {max_err=:.3E}")
+
+    if False:
+        trimesh = TriMesh(points, vor.triangles, normals=vor.normals)
+        triangles = pv.PolyData(points, [(3, *f) for f in trimesh.simplices])
+        plotter = pv.Plotter()
+        plotter.add_mesh(
+            triangles,
+            show_edges=False,
+            show_vertices=False,
+            scalars=err,
+            show_scalar_bar=True,
+        )
+        plotter.show()
 
     if SAVE_DATA:
         with open(DATA_FILE, "wb") as f:
@@ -152,36 +206,29 @@ if __name__ == "__main__":
         with open(DATA_FILE, "rb") as f:
             results = pickle.load(f)
 
-    my_res = [result for result in results if result.test_func == str(test_func)]
-    for expected_order, color in zip(target_orders, TABLEAU_COLORS):
-        my_res = [
-            result
-            for result in results
-            if result.test_func == str(test_func)
-            and result.expected_order == expected_order
-        ]
-        hs = [result.h for result in my_res]
+    for poly_deg, color in zip(poly_degs, TABLEAU_COLORS):
+        my_res = [result for result in results if result.poly_deg == poly_deg]
         ns = [result.N for result in my_res]
-        sqrt_ns = [np.sqrt(result.N, dtype=float) for result in my_res]
-        errs = [result.error for result in my_res]
+        hs = [1 / np.sqrt(result.N, dtype=float) for result in my_res]
+        errs = [result.max_err for result in my_res]
         fit = linregress(np.log(hs), np.log(errs))
-        plt.figure(f"{test_func=}")
+        plt.figure("Surface NF")
         plt.loglog(hs, errs, ".", color=color)
         plt.loglog(
             hs,
             [np.exp(fit.intercept + np.log(h) * fit.slope) for h in hs],
             "-",
             color=color,
-            label=f"Expected: $\\mathcal{{O}}({expected_order})$ ~ "
-            + f"Measured: $\\mathcal{{O}}({fit.slope:.2f})$",
+            label=f"$deg={poly_deg}$ ~ "
+            + f"$\\mathcal{{O}}({fit.slope:.2f})$",
         )
         plt.legend()
 
-    plt.title(f"f={test_func}")
+    plt.title("Neural Field on Torus")
     plt.ylabel("Relative Error")
     # plt.xlabel("$h$")
-    plt.xlabel("$\\sqrt{N}$")
+    plt.xlabel("$\\sqrt{N}^{-1}$")
     plt.gca().xaxis.set_major_formatter(ScalarFormatter())
     plt.gca().xaxis.set_minor_formatter(NullFormatter())
 
-    plt.savefig(f"media/torus_{test_func}.png")
+    plt.savefig("media/torus_nf_convergence.png")
