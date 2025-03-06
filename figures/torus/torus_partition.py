@@ -235,6 +235,13 @@ for edge in edges:
         color="#AAAA00",
         line_width=5,
     )
+plotter.add_points(
+    points,
+    color="black",
+    point_size=10,
+    render_points_as_spheres=True,
+)
+plotter.camera.zoom(1.7)
 if SAVE:
     plotter.save_graphic("media/torus_partition.pdf")
 else:

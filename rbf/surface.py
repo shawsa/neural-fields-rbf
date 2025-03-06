@@ -218,6 +218,10 @@ class SurfaceQuad:
         self.kdt = KDTree(self.trimesh.points)
         self.generate_weights()
 
+    @property
+    def points(self):
+        return self.trimesh.points
+
     def generate_weights(self):
         self.stencils = []
         self.weights = np.zeros(len(self.trimesh.points))

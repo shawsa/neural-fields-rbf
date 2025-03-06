@@ -1,4 +1,5 @@
 from collections import namedtuple
+from itertools import pairwise
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import numpy as np
@@ -12,8 +13,7 @@ from rbf.interpolate import Interpolator, Stencil
 from rbf.rbf import PHS
 
 dim = 2
-
-rbf_order = 6
+rbf_order = 10
 
 poly_deg = (rbf_order + dim) // 2
 rbf = PHS(rbf_order)
@@ -51,11 +51,12 @@ def Loo(Z):
 
 
 def predicted_order(rbf_order, dim, p):
-    k = (rbf_order + dim) / 2
-    n = dim
-    if p == "oo":
-        return 2 * k - n / 2
-    return 2 * k + min(n / p - n / 2, 0)
+    # k = (rbf_order + dim) / 2
+    # n = dim
+    # if p == "oo":
+    #     return 2 * k - n / 2
+    # return 2 * k + min(n / p - n / 2, 0)
+    return rbf_order
 
 
 # interp test
@@ -100,7 +101,8 @@ Result = namedtuple(
     ),
 )
 
-Ns = list(map(int, np.logspace(np.log10(5_000), np.log10(1_000), 5)))
+# Ns = list(map(int, np.logspace(np.log10(5_000), np.log10(1_000), 5)))
+Ns = list(map(int, np.logspace(np.log10(200), np.log10(100), 21)))
 repeats = 5
 
 X, Y = np.meshgrid(*2 * (np.linspace(0.1, 0.9, 400),))
@@ -109,7 +111,7 @@ Fs = foo(X, Y)
 results = []
 for N in (tqdm_obj := tqdm(Ns, position=0)):
     for _ in tqdm(range(repeats), position=1, leave=False):
-        points = UnitSquare(N=N).points
+        points = UnitSquare(N=N, edge_cluster=False).points
         mesh = Delaunay(points)
         h, _ = delaunay_covering_radius_stats(mesh)
 

@@ -1,28 +1,23 @@
-from dataclasses import dataclass
-import pickle
+import json
 import numpy as np
 from matplotlib.colors import TABLEAU_COLORS
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullFormatter, ScalarFormatter
 from scipy.stats import linregress
+from types import SimpleNamespace
 
-from torus_convergence import Result
-
-DATA_FILE = "data/torrus1.pickle"
+DATA_FILE = "data/torus_nf.json"
 
 with open(DATA_FILE, "rb") as f:
-    results = pickle.load(f)
+    results = [SimpleNamespace(**d) for d in json.load(f)]
 
 poly_degs = list(set(result.poly_deg for result in results))
 for poly_deg, color in zip(poly_degs, TABLEAU_COLORS):
-    my_res = [
-        result
-        for result in results
-        if result.poly_deg == poly_deg
-    ]
-    hs = [result.h for result in my_res]
+    my_res = [result for result in results if result.poly_deg == poly_deg]
+    # hs = [result.h for result in my_res]
     ns = [result.N for result in my_res]
-    errs = [result.error for result in my_res]
+    hs = [1 / np.sqrt(result.N) for result in my_res]
+    errs = [result.max_err for result in my_res]
     fit = linregress(np.log(hs), np.log(errs))
     plt.loglog(hs, errs, ".", color=color)
     plt.loglog(
@@ -35,8 +30,14 @@ for poly_deg, color in zip(poly_degs, TABLEAU_COLORS):
     plt.legend()
 
 plt.ylabel("Relative Error")
-plt.xlabel("$h$")
+plt.xlabel("$\sqrt{N}^{-1}$")
+# N_markers = [128_000, 90_000, 64_000]
+N_markers = list(ns[::(len(ns)//2)])
+plt.xticks(
+    [1 / np.sqrt(N) for N in N_markers], ["$\\sqrt{%d}^{-1}$" % N for N in N_markers]
+)
 plt.gca().xaxis.set_major_formatter(ScalarFormatter())
 plt.gca().xaxis.set_minor_formatter(NullFormatter())
+plt.title("Neural Field Convergence")
 
-plt.savefig("media/torus_convergence.png")
+plt.savefig("media/torus_nf_convergence.png")

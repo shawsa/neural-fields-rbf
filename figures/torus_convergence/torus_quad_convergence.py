@@ -1,7 +1,6 @@
-from dataclasses import dataclass
-import pickle
+from dataclasses import dataclass, asdict
+import json
 import numpy as np
-import math
 from matplotlib.colors import TABLEAU_COLORS
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullFormatter, ScalarFormatter
@@ -12,7 +11,7 @@ from tqdm import tqdm
 from min_energy_points import LocalSurfaceVoronoi
 from min_energy_points.torus import SpiralTorus
 
-from rbf.rbf import RBF, PHS
+from rbf.rbf import PHS
 from rbf.surface import TriMesh, SurfaceQuad
 
 
@@ -34,18 +33,17 @@ class TestFunc:
 class Result:
     N: int
     h: float
-    rbf: RBF
+    rbf: str
     poly_deg: int
     stencil_size: int
-    expected_order: int
     test_func: TestFunc
     approx: float
     error: float
 
 
 if __name__ == "__main__":
-    DATA_FILE = "data/torrus_quad_1.pickle"
-    SAVE_DATA = True
+    DATA_FILE = "data/torus_quad.json"
+    SAVE_DATA = False
 
     R, r = 3, 1
     exact = 4 * np.pi**2 * R * r
@@ -60,85 +58,84 @@ if __name__ == "__main__":
     Ns = np.logspace(
         np.log10(32_000),
         np.log10(64_000),
-        5,
+        11,
         dtype=int,
     )
-
-    target_orders = [4, 6, 8, 10]
+    rbf = PHS(3)
+    poly_degs = [1, 2, 3, 4]
+    stencil_size = 40
 
     results = []
-    for N in (tqdm_N := tqdm(Ns[::-1], position=1, leave=True)):
-        tqdm_N.set_description(f"{N=} - generating surface...")
-        torus = SpiralTorus(N, R=R, r=r)
-        N = torus.N
-        points = torus.points
-        valid_surface = False
-        while not valid_surface:
-            vor = LocalSurfaceVoronoi(
-                torus.points,
-                torus.normals,
-                torus.implicit_surf,
-            )
-            trimesh = TriMesh(points, vor.triangles, normals=vor.normals)
-            valid_surface = trimesh.is_valid()
+    for _ in (tqdm_status := tqdm([None], position=0, leave=True)):
+        tqdm_status.set_description("Calculating first quadrature")
+        for N in (tqdm_N := tqdm(Ns[::-1], position=1, leave=True)):
+            tqdm_N.set_description(f"{N=} - generating surface")
+            torus = SpiralTorus(N, R=R, r=r)
+            N = torus.N
+            points = torus.points
+            valid_surface = False
+            tqdm_N.set_description(f"{N=} - constructing mesh")
+            while not valid_surface:
+                vor = LocalSurfaceVoronoi(
+                    torus.points,
+                    torus.normals,
+                    torus.implicit_surf,
+                )
+                trimesh = TriMesh(points, vor.triangles, normals=vor.normals)
+                valid_surface = trimesh.is_valid()
 
-        for target_order in (
-            tqdm_poly_deg := tqdm(target_orders, position=2, leave=False)
-        ):
-            tqdm_poly_deg.set_description(f"{target_order=}")
-            interp_order = target_order + 2
-            rbf = PHS(interp_order)
-            poly_deg = (interp_order + 2) // 2
-            stencil_size = max(
-                12, math.ceil(1.5 * (2 + poly_deg) * (1 + poly_deg) // 2)
-            )
+            for poly_deg in (
+                    tqdm_poly_deg := tqdm(poly_degs[::-1], position=2, leave=False)
+            ):
+                tqdm_poly_deg.set_description(f"{poly_deg=}")
 
-            quad = SurfaceQuad(
-                trimesh=trimesh,
-                rbf=rbf,
-                poly_deg=poly_deg,
-                stencil_size=stencil_size,
-                verbose=True,
-                tqdm_kwargs={
-                    "position": 3,
-                    "leave": False,
-                    "desc": "Calculating weights",
-                },
-            )
+                quad = SurfaceQuad(
+                    trimesh=trimesh,
+                    rbf=rbf,
+                    poly_deg=poly_deg,
+                    stencil_size=stencil_size,
+                    verbose=True,
+                    tqdm_kwargs={
+                        "position": 3,
+                        "leave": False,
+                        "desc": "Calculating weights",
+                    },
+                )
 
-            approx = quad.weights @ test_func(points)
-            error = abs(approx - exact) / exact
+                approx = quad.weights @ test_func(points)
+                error = abs(approx - exact) / exact
 
-            result = Result(
-                N=N,
-                h=vor.circum_radius,
-                rbf=rbf,
-                poly_deg=poly_deg,
-                stencil_size=stencil_size,
-                expected_order=target_order,
-                approx=approx,
-                error=error,
-                test_func=str(test_func),
-            )
-            results.append(result)
-            tqdm_N.set_description(f"{N=}, {str(rbf)}, {poly_deg=}, {error=:.3E}")
+                result = Result(
+                    N=N,
+                    h=vor.circum_radius,
+                    rbf=str(rbf),
+                    poly_deg=poly_deg,
+                    stencil_size=stencil_size,
+                    approx=approx,
+                    error=error,
+                    test_func=str(test_func),
+                )
+                results.append(result)
+                tqdm_status.set_description(f"{N=}, {str(rbf)}, {poly_deg=}, {error=:.3E}")
 
     if SAVE_DATA:
-        with open(DATA_FILE, "wb") as f:
-            pickle.dump(results, f)
+        results_dicts = [asdict(result) for result in results]
+        with open(DATA_FILE, "w") as f:
+            json.dump(results_dicts, f)
 
     if False:
         # for REPL use
-        with open(DATA_FILE, "rb") as f:
-            results = pickle.load(f)
+        with open(DATA_FILE, "r") as f:
+            results = json.load(f)
+        results = [Result(**result) for result in results]
 
     my_res = [result for result in results if result.test_func == str(test_func)]
-    for expected_order, color in zip(target_orders, TABLEAU_COLORS):
+    for poly_deg, color in zip(poly_degs, TABLEAU_COLORS):
         my_res = [
             result
             for result in results
             if result.test_func == str(test_func)
-            and result.expected_order == expected_order
+            and result.poly_deg == poly_deg
         ]
         hs = [result.h for result in my_res]
         ns = [result.N for result in my_res]
@@ -152,16 +149,14 @@ if __name__ == "__main__":
             [np.exp(fit.intercept + np.log(h) * fit.slope) for h in hs],
             "-",
             color=color,
-            label=f"Expected: $\\mathcal{{O}}({expected_order})$ ~ "
-            + f"Measured: $\\mathcal{{O}}({fit.slope:.2f})$",
+            label=f"deg={poly_deg}~$\\mathcal{{O}}({fit.slope:.2f})$",
         )
         plt.legend()
 
     plt.title(f"f={test_func}")
     plt.ylabel("Relative Error")
     # plt.xlabel("$h$")
-    plt.xlabel("$\\sqrt{N}$")
+    plt.xlabel("$\\sqrt{N}^{-1}$")
     plt.gca().xaxis.set_major_formatter(ScalarFormatter())
     plt.gca().xaxis.set_minor_formatter(NullFormatter())
-
-    plt.savefig(f"media/torus_{test_func}.png")
+    plt.show()

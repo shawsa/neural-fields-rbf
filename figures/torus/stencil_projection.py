@@ -138,7 +138,7 @@ plotter.add_mesh(
     smooth_flat_triangles,
     show_edges=False,
     color="#00AAAA",
-    opacity=0.3,
+    opacity=0.7,
 )
 # plotter.add_points(
 #     torus.points[np.array([i for i in range(torus.N) if i not in stencil])],

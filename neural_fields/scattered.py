@@ -68,6 +68,38 @@ class NeuralField:
         return -u + self.conv(self.firing_rate(u))
 
 
+class NeuralFieldCustomKernel(NeuralField):
+    def __init__(
+        self,
+        verbose=False,
+        tqdm_kwargs={},
+        dist=euclidian_dist,
+        *,
+        qf: LocalQuad,
+        firing_rate: Callable[[np.ndarray], np.ndarray],
+        weight_kernel: Callable[[np.ndarray, np.ndarray], np.ndarray],
+    ):
+        self.qf = qf
+        self.points = qf.points
+        self.firing_rate = firing_rate
+        self.weight_kernel = weight_kernel
+        self.dist = dist
+        self.initialize_convolution(verbose=verbose, tqdm_kwargs=tqdm_kwargs)
+
+    def initialize_convolution(self, verbose: bool, tqdm_kwargs):
+        conv_mat = np.zeros((len(self.points), len(self.points)))
+        verbose_wrapper = enumerate(self.points)
+        if verbose:
+            verbose_wrapper = tqdm(
+                verbose_wrapper, total=len(self.points), **tqdm_kwargs
+            )
+        for row, point in verbose_wrapper:
+            for col, point2 in enumerate(self.points):
+                conv_mat[row][col] = self.weight_kernel(point, point2)
+            conv_mat[row] *= self.qf.weights
+        self.conv_mat = conv_mat
+
+
 class NeuralFieldSparse(NeuralField):
     def __init__(
         self,

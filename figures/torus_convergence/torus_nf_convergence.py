@@ -1,5 +1,5 @@
-from dataclasses import dataclass
-import pickle
+from dataclasses import dataclass, asdict
+import json
 import numpy as np
 import math
 from matplotlib.colors import TABLEAU_COLORS
@@ -33,14 +33,14 @@ import pyvista as pv
 class Result:
     N: int
     vor_circum: float
-    rbf: RBF
+    rbf: str
     poly_deg: int
     stencil_size: int
     max_err: float
 
 
 if __name__ == "__main__":
-    DATA_FILE = "data/torrus_nf_1.pickle"
+    DATA_FILE = "data/torrus_nf.json"
     SAVE_DATA = True
 
     R, r = 3, 1
@@ -79,18 +79,18 @@ if __name__ == "__main__":
 
     Ns = np.logspace(
         np.log10(16_000),
-        np.log10(128_000),
-        5,
+        np.log10(32_000),
+        3,
         dtype=int,
     )
 
     solver = AB5(seed=RK4(), seed_steps_per_step=2)
     # solver = RK4()
     t0, tf = 0, 0.2
-    time_step_sizes = [1e-4]
+    time_step_sizes = [1e-5]
     # Ns = np.logspace(np.log10(1_000), np.log10(5_000), 5, dtype=int)
     # poly_degs = [1, 2, 3, 4]
-    stencil_size = 24
+    # stencil_size = 24
     poly_degs = [1, 2, 3, 4]
     rbf = PHS(3)
 
@@ -120,9 +120,9 @@ if __name__ == "__main__":
         ):
             tqdm_poly_deg.set_description(f"{poly_deg=}")
             # rbf = PHS(max(2, 2 * poly_deg - 2))
-            # stencil_size = max(
-            #     12, math.ceil(1.5 * (2 + poly_deg) * (1 + poly_deg) // 2)
-            # )
+            stencil_size = max(
+                12, math.ceil(1.5 * (2 + poly_deg) * (1 + poly_deg) // 2)
+            )
 
             tqdm_obj.set_description(f"{N=}, {poly_deg=} constructing stencil")
             qf = SurfaceQuad(
@@ -176,7 +176,7 @@ if __name__ == "__main__":
             result = Result(
                 N=N,
                 vor_circum=vor.circum_radius,
-                rbf=rbf,
+                rbf=str(rbf),
                 poly_deg=poly_deg,
                 stencil_size=stencil_size,
                 max_err=max_err,
@@ -198,13 +198,15 @@ if __name__ == "__main__":
         plotter.show()
 
     if SAVE_DATA:
-        with open(DATA_FILE, "wb") as f:
-            pickle.dump(results, f)
+        results_dicts = [asdict(result) for result in results]
+        with open(DATA_FILE, "w") as f:
+            json.dump(results_dicts, f)
 
     if False:
         # for REPL use
-        with open(DATA_FILE, "rb") as f:
-            results = pickle.load(f)
+        with open(DATA_FILE, "r") as f:
+            results = json.load(f)
+        results = [Result(**result) for result in results]
 
     for poly_deg, color in zip(poly_degs, TABLEAU_COLORS):
         my_res = [result for result in results if result.poly_deg == poly_deg]

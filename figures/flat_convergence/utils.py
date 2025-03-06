@@ -8,12 +8,16 @@ from rbf.quadrature import LocalQuad
 import sympy as sym
 from tqdm import tqdm
 
-CART_STENCILS = "data/cartesian_stencil_sizes.pickle"
-with open(CART_STENCILS, "rb") as f:
-    cart_sizes = pickle.load(f)
-HEX_STENCILS = "data/hex_stencil_sizes.pickle"
-with open(HEX_STENCILS, "rb") as f:
-    hex_sizes = pickle.load(f)
+
+try:
+    CART_STENCILS = "data/cartesian_stencil_sizes.pickle"
+    with open(CART_STENCILS, "rb") as f:
+        cart_sizes = pickle.load(f)
+    HEX_STENCILS = "data/hex_stencil_sizes.pickle"
+    with open(HEX_STENCILS, "rb") as f:
+        hex_sizes = pickle.load(f)
+except FileNotFoundError:
+    print("Failed to load stencil sizes dict.")
 
 
 class TestFunction(ABC):
