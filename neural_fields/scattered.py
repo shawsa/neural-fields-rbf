@@ -68,6 +68,38 @@ class NeuralField:
         return -u + self.conv(self.firing_rate(u))
 
 
+class NeuralFieldCustomKernel(NeuralField):
+    def __init__(
+        self,
+        verbose=False,
+        tqdm_kwargs={},
+        dist=euclidian_dist,
+        *,
+        qf: LocalQuad,
+        firing_rate: Callable[[np.ndarray], np.ndarray],
+        weight_kernel: Callable[[np.ndarray, np.ndarray], np.ndarray],
+    ):
+        self.qf = qf
+        self.points = qf.points
+        self.firing_rate = firing_rate
+        self.weight_kernel = weight_kernel
+        self.dist = dist
+        self.initialize_convolution(verbose=verbose, tqdm_kwargs=tqdm_kwargs)
+
+    def initialize_convolution(self, verbose: bool, tqdm_kwargs):
+        conv_mat = np.zeros((len(self.points), len(self.points)))
+        verbose_wrapper = enumerate(self.points)
+        if verbose:
+            verbose_wrapper = tqdm(
+                verbose_wrapper, total=len(self.points), **tqdm_kwargs
+            )
+        for row, point in verbose_wrapper:
+            for col, point2 in enumerate(self.points):
+                conv_mat[row][col] = self.weight_kernel(point, point2)
+            conv_mat[row] *= self.qf.weights
+        self.conv_mat = conv_mat
+
+
 class NeuralFieldSparse(NeuralField):
     def __init__(
         self,
@@ -97,7 +129,20 @@ class NeuralFieldSparse(NeuralField):
             indptr.append(len(data))
 
         self.conv_mat = csr_array((data, indices, indptr), shape=shape)
-        self.fill = 100 * self.conv_mat.nnz / len(self.points)**2
+        self.fill = 100 * self.conv_mat.nnz / len(self.points) ** 2
+
+
+class NeuralFieldMemMin(NeuralField):
+    def initialize_convolution(self, verbose: bool = False, tqdm_kwargs={}):
+        pass
+
+    def conv(self, arr: np.ndarray):
+        ret = np.empty_like(arr)
+        for index, x in enumerate(self.points):
+            ret[index] = self.qf.weights @ (
+                self.weight_kernel(self.dist(self.points, x)) * arr
+            )
+        return ret
 
 
 if __name__ == "__main__":

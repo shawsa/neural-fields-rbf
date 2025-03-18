@@ -15,3 +15,5 @@ Manuscript/manuscript.synctex.gz
 *.gif
 
 *.pyc
+
+figures/showcase/pill_shape/data/*

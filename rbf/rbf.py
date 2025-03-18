@@ -82,7 +82,7 @@ class EvenPHS(RBF):
     def __call__(self, r):
         # account for removeable singularity at r = 0
         ret = np.empty(r.shape)
-        mask = ret == 0
+        mask = np.abs(r) < 1e-15
         ret[mask] = 0
         ret[~mask] = r[~mask] ** self.deg * np.log(r[~mask])
         return ret
@@ -93,8 +93,11 @@ class EvenPHS(RBF):
     def d2r(r):
         raise NotImplementedError
 
+    def dr_div_r(self, r):
+        raise NotImplementedError
+
     def __repr__(self):
-        return f"r**{self.deg} * log(r)"
+        return f"r**{self.deg}*log(r)"
 
 
 def PHS(deg: int) -> RBF:

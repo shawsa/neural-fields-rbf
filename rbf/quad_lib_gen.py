@@ -29,7 +29,8 @@ NP_SUB = {
 # careful of the order of replacement e.g. arcsinh before arcsin
 NP_SUB_SPECIAL = {
     "math.asinh": "np.arcsinh",
-    "math.log": "np.log",
+    # "math.log": "np.log",
+    "math.log": "complexlog",
     "math.sqrt": "np.sqrt",
 }
 
@@ -40,8 +41,7 @@ def numpy_subs(code: str) -> str:
     return code
 
 
-def generate(expr_str: str):
-    phi = parser.parse_expr(expr_str)
+def generate(phi):
     triangle_integral = integrate(
         integrate(phi.subs(r, r_subs), (y, 0, b / a * x)), (x, 0, a)
     ).simplify()
@@ -50,16 +50,17 @@ def generate(expr_str: str):
     assert len(triangle_integral.free_symbols) == 2
     return (
         DICT_NAME
-        + f'["{expr_str}"] = lambda a, b:'
+        + f'["{str(phi)}"] = lambda a, b:('
         + numpy_subs(pycode(triangle_integral))
+        + ").real"
     )
 
 
-def add_to_library(expr_str: str):
-    print(f"Adding {expr_str} to library...")
-    line = generate(expr_str)
+def add_to_library(phi):
+    print(f"Adding {str(phi)} to library...")
+    line = generate(phi)
     with open(LIB_FILE, "a") as f:
-        f.write(f"\n# {expr_str}\n")
+        f.write(f"\n# {str(phi)}\n")
         f.write(line + "\n")
 
 
@@ -89,13 +90,14 @@ def make_black():
 
 if __name__ == "__main__":
     clear_library()
-    for n in range(3, 12, 2):
-        expr_str = f"r**{n}"
-        add_to_library(expr_str)
+    for n in range(3, 22, 2):
+        phi = parser.parse_expr(f"r**{n}")
+        add_to_library(phi)
 
-    for n in range(2, 11, 2):
-        expr_str = f"r**{n}*log(r)"
-        add_to_library(expr_str)
+    for n in range(2, 21, 2):
+        phi = parser.parse_expr(f"r**{n}*log(r)")
+        add_to_library(phi)
 
     append_test()
     make_black()
+    print("done")

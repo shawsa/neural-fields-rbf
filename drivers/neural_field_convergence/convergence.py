@@ -1,12 +1,13 @@
-from dataclasses import dataclass
+from collections import namedtuple
 from itertools import product
 import matplotlib.pyplot as plt
 import numpy as np
 from os.path import exists, join
 import pickle
+from scipy.spatial import Delaunay
 from tqdm import tqdm
 
-from manufactured import ManufacturedSolution
+from manufactured import ManufacturedSolutionPeriodic
 from neural_fields.scattered import (
     NeuralFieldSparse,
     FlatTorrusDistance,
@@ -14,52 +15,57 @@ from neural_fields.scattered import (
 from neural_fields.kernels import Gaussian
 from odeiter import TimeDomain_Start_Stop_MaxSpacing, RK4
 from odeiter.adams_bashforth import AB5
+from rbf.geometry import delaunay_covering_radius_stats
 from rbf.points import UnitSquare
 from rbf.points.utils import get_stencil_size
 from rbf.quadrature import LocalQuad
 from rbf.rbf import PHS
 
 
-@dataclass
-class Result:
-    solver: str
-    delta_t: float
-    N: float
-    rbf: str
-    poly_deg: int
-    stencil_size: int
-    max_relative_error: float
-
+Result = namedtuple(
+    "Result",
+    [
+        "solver",
+        "delta_t",
+        "N",
+        "h",
+        "rbf",
+        "poly_deg",
+        "stencil_size",
+        "max_relative_error",
+    ],
+)
 
 if __name__ == "__main__":
     DATA_DIR = "data"
     SAVE_DATA = True
 
-    width = 50
+    width = 10
     t0, tf = 0, 0.1
 
     threshold = 0.5
     gain = 5
-    weight_kernel_sd = 1
-    sol_sd = 0.5
-    path_radius = 10
+    weight_kernel_sd = 0.25
+    sol_sd = 1
+    path_radius = 2
     epsilon = 0.1
 
-    sol = ManufacturedSolution(
+    sol = ManufacturedSolutionPeriodic(
         weight_kernel_sd=weight_kernel_sd,
         threshold=threshold,
         gain=gain,
         solution_sd=sol_sd,
         path_radius=path_radius,
         epsilon=epsilon,
+        period=width,
     )
 
     rbf = PHS(3)
     solver = AB5(seed=RK4(), seed_steps_per_step=2)
-    time_step_sizes = [1e-3, 1e-4]
-    # Ns = [8000 * 2**i for i in range(3)]
-    Ns = np.logspace(3.9, 4.7, 11, dtype=int)
-    repeats = 5
+    time_step_sizes = [1e-4]
+    # Ns = np.logspace(np.log10(1_000), np.log10(5_000), 5, dtype=int)
+    Ns = np.logspace(np.log10(10_000), np.log10(20_000), 7, dtype=int)
+    repeats = 8
     poly_degs = [1, 2, 3, 4]
 
     results = []
@@ -74,7 +80,9 @@ if __name__ == "__main__":
         ):
             tqdm_obj.set_description(f"{N=}, {poly_deg=} generating points")
             points = UnitSquare(N).points * width - width / 2
-            stencil_size = get_stencil_size(deg=poly_deg)
+            mesh = Delaunay(points)
+            h, _ = delaunay_covering_radius_stats(mesh)
+            stencil_size = get_stencil_size(deg=poly_deg, stability_factor=1.5)
             tqdm_obj.set_description(f"{N=}, {poly_deg=} constructing stencil")
             qf = LocalQuad(
                 points=points,
@@ -122,6 +130,7 @@ if __name__ == "__main__":
                         solver=solver.name,
                         delta_t=delta_t,
                         N=N,
+                        h=h,
                         rbf=str(rbf),
                         poly_deg=poly_deg,
                         stencil_size=stencil_size,
@@ -145,13 +154,11 @@ if __name__ == "__main__":
         plt.figure(f"Convergence {delta_t=}")
         for deg in set([res.poly_deg for res in results]):
             my_res = [
-                res
-                for res in results
-                if res.poly_deg == deg and res.delta_t == delta_t
+                res for res in results if res.poly_deg == deg and res.delta_t == delta_t
             ]
-            my_hs = [1 / np.sqrt(res.N) for res in my_res]
+            my_hs = [res.h for res in my_res]
             my_errs = [res.max_relative_error for res in my_res]
             plt.loglog(my_hs, my_errs, ".", label=f"{deg=}")
-        plt.xlabel("$N^{-1/2}$")
+        plt.xlabel("$h$")
         plt.ylabel("Relative Error")
         plt.legend()
