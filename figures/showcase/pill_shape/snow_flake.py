@@ -27,15 +27,17 @@ def gauss(r, sd):
 
 
 pos_sd = 0.05
+pos_amp = 10
 neg_sd = 0.1
+neg_amp = 10
 
 
 def kernel(r):
-    return 5 * (gauss(r, pos_sd) - gauss(r, neg_sd))
+    return pos_amp * gauss(r, pos_sd) - neg_amp * gauss(r, neg_sd)
 
 
 threshold = 0.2
-gain = 5
+gain = 20
 
 
 solver = AB5(seed=RK4(), seed_steps_per_step=2)
@@ -70,14 +72,34 @@ u = u0
 plotter = pv.Plotter(off_screen=True)
 # plotter = pv.Plotter(off_screen=False)
 plotter.open_gif("media/snowflake.gif")
+shift = np.array([0, 1, 0], dtype=float)
+mesh = pv.PolyData(qf.points - 1.1 * shift, [(3, *f) for f in qf.trimesh.simplices])
+mesh["scalars"] = u
 plotter.add_mesh(
-    pv.PolyData(qf.points, [(3, *f) for f in qf.trimesh.simplices]),
+    mesh,
     show_edges=False,
     lighting=False,
-    scalars=u,
+    scalars="scalars",
     cmap="jet",
     clim=[-2, 2],
     render=True,
+    show_scalar_bar=False,
+)
+points_inverted = qf.points.copy()
+points_inverted[:, 0] *= -1
+mesh2 = pv.PolyData(
+    points_inverted + 1.1 * shift, [(3, *f) for f in qf.trimesh.simplices]
+)
+mesh2["scalars"] = u
+plotter.add_mesh(
+    mesh2,
+    show_edges=False,
+    lighting=False,
+    scalars="scalars",
+    cmap="jet",
+    clim=[-2, 2],
+    render=True,
+    show_scalar_bar=False,
 )
 plotter.camera_position = "yz"
 plotter.camera.elevation = -45
@@ -93,17 +115,8 @@ for index, (t, u) in enumerate(
     )
 ):
     if index % 10 == 0:
-        plotter.update_scalars(u, render=False)
+        mesh["scalars"] = u
+        mesh2["scalars"] = u
         plotter.write_frame()
 
 plotter.close()
-
-# plotter = pv.Plotter()
-# plotter.add_mesh(
-#     pv.PolyData(qf.points, [(3, *f) for f in qf.trimesh.simplices]),
-#     show_edges=False,
-#     scalars=u,
-#     cmap="jet",
-#     clim=[-2, 2],
-# )
-# plotter.show()
