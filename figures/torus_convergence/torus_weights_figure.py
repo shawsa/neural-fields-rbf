@@ -53,7 +53,7 @@ plotter.add_mesh(
     ),
     show_edges=False,
     scalars=qf.weights,
-    cmap="jet",
+    cmap="viridis",
 )
 plotter.remove_scalar_bar()
 plotter.screenshot("media/torus_weights.png")

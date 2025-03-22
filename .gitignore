@@ -16,4 +16,4 @@ Manuscript/manuscript.synctex.gz
 
 *.pyc
 
-figures/showcase/blood_cell/data/*
+figures/showcase/*/data/*

@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
 import matplotlib.gridspec as gs
 from matplotlib.colors import Normalize
+
 # import matplotlib.patches as patches
 import numpy as np
 import pickle
@@ -52,7 +53,7 @@ for poly_deg in poly_degs:
     color = colors[poly_deg]
     my_res = [result for result in results if result.poly_deg == poly_deg]
     ns = [result.N for result in my_res]
-    hs = [1/np.sqrt(result.N) for result in my_res]
+    hs = [1 / np.sqrt(result.N) for result in my_res]
     errs = [result.error for result in my_res]
     fit = linregress(np.log(hs), np.log(errs))
     ax_quad.loglog(hs, errs, ".", color=color)
@@ -66,16 +67,13 @@ for poly_deg in poly_degs:
 ax_quad.legend()
 ax_quad.set_title("Quadrature Convergence")
 ax_quad.set_ylabel("Relative Error")
-ax_quad.set_xlabel("$\\sqrt{N}^{-1}$")
+ax_quad.set_xlabel("${N}^{-1/2}$")
 # ax_quad.set_ylim(1e-9, 1e-5)
 ax_quad.xaxis.set_major_formatter(ScalarFormatter())
 ax_quad.minorticks_off()
 N_ticks = [32_000, 45_000, 64_000]
-tic_locs = [1/np.sqrt(tick) for tick in N_ticks]
-ax_quad.set_xticks(
-    tic_locs,
-    [f"$\\sqrt{{{tick}}}^{{-1}}$" for tick in N_ticks]
-)
+tic_locs = [1 / np.sqrt(tick) for tick in N_ticks]
+ax_quad.set_xticks(tic_locs, [f"${tick}^{{-1/2}}$" for tick in N_ticks])
 
 
 #############
@@ -94,29 +92,53 @@ for poly_deg in poly_degs:
     color = colors[poly_deg]
     my_res = [result for result in results if result.poly_deg == poly_deg]
     ns = [result.N for result in my_res]
-    hs = [1/np.sqrt(res.N) for res in my_res]
+    hs = [1 / np.sqrt(res.N) for res in my_res]
     errs = [result.max_err for result in my_res]
     fit = linregress(np.log(hs), np.log(errs))
-    ax_nf.loglog(hs, errs, ".", color=color)
+    ax_nf.loglog(hs, errs, ".-", color=color, label=f"deg={poly_deg}")
+    # ax_nf.loglog(
+    #     hs,
+    #     [np.exp(fit.intercept + np.log(h) * fit.slope) for h in hs],
+    #     "-",
+    #     color=color,
+    #     label=f"deg{poly_deg}~$\\mathcal{{O}}({fit.slope:.2f})$",
+    # )
+upper_order = 4
+lower_order = 10
+result_upper = results[
+    np.argmax(
+        [np.log(res.max_err) - lower_order * np.log(res.N**-0.5) for res in results]
+    )
+]
+result_lower = results[
+    np.argmin(
+        [np.log(res.max_err) - upper_order * np.log(res.N**-0.5) for res in results]
+    )
+]
+for (o, res), linestyle in zip(
+    [
+        (upper_order, result_upper),
+        (lower_order, result_lower),
+    ],
+    ["--", ":", "-.", "-"],
+):
     ax_nf.loglog(
         hs,
-        [np.exp(fit.intercept + np.log(h) * fit.slope) for h in hs],
-        "-",
-        color=color,
-        label=f"deg{poly_deg}~$\\mathcal{{O}}({fit.slope:.2f})$",
+        [res.max_err * np.exp(np.log(h / res.N**-0.5) * o) for h in hs],
+        linestyle=linestyle,
+        color="black",
+        label=f"$\\mathcal{{O}}({o})$",
     )
+
 ax_nf.legend()
 ax_nf.set_title("Neural Field Convergence")
 ax_nf.set_ylabel("Relative Error")
-ax_nf.set_xlabel("$\\sqrt{N}^{-1}$")
+ax_nf.set_xlabel("$N^{-1}$")
 ax_nf.xaxis.set_major_formatter(ScalarFormatter())
 ax_nf.minorticks_off()
 N_ticks = [32_000, 45_000, 64_000]
-tic_locs = [1/np.sqrt(tick) for tick in N_ticks]
-ax_nf.set_xticks(
-    tic_locs,
-    [f"$\\sqrt{{{tick}}}^{{-1}}$" for tick in N_ticks]
-)
+tic_locs = [1 / np.sqrt(tick) for tick in N_ticks]
+ax_nf.set_xticks(tic_locs, [f"${tick}^{{-1/2}}$" for tick in N_ticks])
 
 #############
 #
@@ -127,7 +149,7 @@ ax_nf.set_xticks(
 ax_weights = fig.add_subplot(grid[1, 0])
 with open("torus_convergence/media/torus_weights.png", "rb") as f:
     image = plt.imread(f)
-im = ax_weights.imshow(image[200:600, 200: 800])
+im = ax_weights.imshow(image[200:600, 200:800])
 ax_weights.axis("off")
 
 
@@ -144,12 +166,21 @@ ax_hist = fig.add_subplot(grid[1, 1])
 _, bins, patches = ax_hist.hist(weights, bins=25, orientation="horizontal")
 cnorm = Normalize(np.min(weights), np.max(weights))
 for val, patch in zip(bins, patches):
-    patch.set_facecolor(plt.cm.jet(cnorm(val)))
+    patch.set_facecolor(plt.cm.viridis(cnorm(val)))
 
-# ax_hist.axis("off")
-# ax_hist.text(20, 0, "0")
-# ax_hist.text(20, 5e-4, "0.0005")
-# ax_hist.text(20, 9e-4, "0.0009")
+# ax_hist.set_xlabel("Counts")
+# ax_hist.set_ylabel("weight")
+max_weight_marker = np.round(np.max(weights), 4)
+min_weight_marker = np.round(np.min(weights), 4)
+ax_hist.axis("off")
+ax_hist.text(-800, max_weight_marker, f"{max_weight_marker:.4f}")
+ax_hist.text(-800, min_weight_marker, f"{min_weight_marker:.4f}")
+ax_hist.text(-600, (max_weight_marker + min_weight_marker) / 2, "weights", rotation=90)
+ax_hist.text(
+    1500,
+    min_weight_marker - (max_weight_marker - min_weight_marker) * 0.07,
+    "counts",
+)
 
 
 #############

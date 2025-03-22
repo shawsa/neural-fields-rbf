@@ -102,7 +102,7 @@ approx = sum(
 error = (approx - exact) / exact
 ax_test_func.triplot(*rand_points.T, qf_rand.mesh.simplices, linewidth=0.2)
 test_func = ax_test_func.pcolormesh(
-    X, Y, bump(X - center[0], Y - center[1]), cmap="jet"
+    X, Y, bump(X - center[0], Y - center[1]), cmap="viridis"
 )
 ax_test_func.set_xlim(0, 1)
 ax_test_func.set_ylim(0, 1)
@@ -122,7 +122,9 @@ neg_style = {
     "markerfacecolor": (0.0, 0.0, 0.0, 1.0),
     "markeredgecolor": "k",
 }
-weight_color = ax_weights.scatter(*rand_points.T, c=qf_rand.weights, cmap="jet", s=1)
+weight_color = ax_weights.scatter(
+    *rand_points.T, c=qf_rand.weights, cmap="viridis", s=1
+)
 ax_weights.plot(*rand_points[neg_mask].T, **neg_style)
 ax_weights.set_ylim(0, 1)
 ax_weights.axis("equal")
@@ -140,7 +142,7 @@ ax_hist = fig.add_subplot(grid[row1, hist_col])
 _, bins, patches = ax_hist.hist(qf_rand.weights, bins=25, orientation="horizontal")
 cnorm = Normalize(np.min(qf_rand.weights), np.max(qf_rand.weights))
 for val, patch in zip(bins, patches):
-    patch.set_facecolor(plt.cm.jet(cnorm(val)))
+    patch.set_facecolor(plt.cm.viridis(cnorm(val)))
 
 ax_hist.axis("off")
 ax_hist.text(20, 0, "0")
@@ -150,7 +152,7 @@ ax_hist.text(20, 9e-4, "0.0009")
 
 # rand error
 ax_rand_space = fig.add_subplot(grid[row2, lcol])
-error_plot = ax_rand_space.pcolormesh(X, Y, err_rand, cmap="jet")
+error_plot = ax_rand_space.pcolormesh(X, Y, err_rand, cmap="viridis")
 ax_rand_space.triplot(*rand_points.T, qf_rand.mesh.simplices, linewidth=0.2)
 # ax_rand_space.plot(*center, "k*")
 ax_rand_space.plot(*rand_points.T, "k.", markersize=0.5)
@@ -170,7 +172,7 @@ ax_rand_space.text(*y_label_loc, "$y_0$", transform=ax_rand_space.transAxes)
 # rand log error
 ax_rand_log_space = fig.add_subplot(grid[row2, rcol])
 log_error_plot = ax_rand_log_space.pcolormesh(
-    X, Y, np.log10(np.abs(err_rand)), cmap="jet"
+    X, Y, np.log10(np.abs(err_rand)), cmap="viridis"
 )
 ax_rand_log_space.set_xlim(0, 1)
 ax_rand_log_space.set_ylim(0, 1)
@@ -187,7 +189,7 @@ ax_rand_log_space.text(*y_label_loc, "$y_0$", transform=ax_rand_log_space.transA
 
 # hex error
 ax_hex_space = fig.add_subplot(grid[row3, lcol])
-error_plot = ax_hex_space.pcolormesh(X, Y, err_hex, cmap="jet")
+error_plot = ax_hex_space.pcolormesh(X, Y, err_hex, cmap="viridis")
 ax_hex_space.triplot(*hex_points.T, qf_hex.mesh.simplices, linewidth=0.2)
 ax_hex_space.plot(*hex_points.T, "k.", markersize=0.5)
 ax_hex_space.set_xlim(0, 1)
@@ -205,7 +207,7 @@ ax_hex_space.text(*y_label_loc, "$y_0$", transform=ax_hex_space.transAxes)
 # Panel H
 ax_hex_log_space = fig.add_subplot(grid[row3, rcol])
 log_error_plot = ax_hex_log_space.pcolormesh(
-    X, Y, np.log10(np.abs(err_hex)), cmap="jet"
+    X, Y, np.log10(np.abs(err_hex)), cmap="viridis"
 )
 ax_hex_log_space.set_xlim(0, 1)
 ax_hex_log_space.set_ylim(0, 1)
@@ -226,8 +228,8 @@ subplot_label_y = 1.05
 subplot_label_font = {
     "size": "x-large",
     "weight": "bold",
-    "family": "sans",
-    "usetex": False,
+    "family": "STIXGeneral",
+    "usetex": True,
 }
 for ax, label in zip(
     [

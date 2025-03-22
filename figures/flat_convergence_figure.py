@@ -197,7 +197,7 @@ ax_hex.set_xticks(x_ticks, [str(tick) for tick in x_ticks])
 # sym_func = cheb5(2 * x - 1) * cheb4(2 * y - 1) + 1
 # func = sym.lambdify((x, y), sym_func)
 # func_X, func_Y = np.meshgrid(*2*(np.linspace(0, 1, 201), ))
-# ax_func.pcolormesh(func_X, func_Y, func(func_X, func_Y), cmap="jet")
+# ax_func.pcolormesh(func_X, func_Y, func(func_X, func_Y), cmap="viridis")
 # ax_func.set_title("Quadrature Test function")
 # ax_func.axis("off")
 
@@ -208,7 +208,7 @@ ax_hex.set_xticks(x_ticks, [str(tick) for tick in x_ticks])
 #############
 
 ax_sol = fig.add_subplot(grid[1, 1])
-ax_sol.pcolormesh(X, Y, sol.exact(X, Y, tf), cmap="jet")
+ax_sol.pcolormesh(X, Y, sol.exact(X, Y, tf), cmap="viridis")
 my_ts = np.linspace(0, 2*np.pi, 201)
 ax_sol.plot(path_radius*np.cos(my_ts), path_radius*np.sin(my_ts), "w-")
 ax_sol.set_title("Neural Field Solution")
@@ -252,4 +252,4 @@ grid.tight_layout(fig)
 plt.show()
 
 # pdfs do not look right with pcolormaps
-# plt.savefig(FILE + ".png", dpi=300, bbox_inches="tight")
+plt.savefig(FILE + ".png", dpi=300, bbox_inches="tight")
