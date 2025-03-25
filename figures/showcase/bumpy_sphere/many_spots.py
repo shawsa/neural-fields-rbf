@@ -12,8 +12,6 @@ from odeiter.adams_bashforth import AB5
 from neural_fields.scattered import NeuralFieldSparse
 from neural_fields.firing_rate import HermiteBump
 
-from bumpy_sphere_utils import rotation_matrix
-
 SAVE_3D_ANIMATION = True
 
 N = 64_000
@@ -49,7 +47,7 @@ synaptic_efficacy_timescale = 20
 synaptic_depletion_rate = 2
 
 solver = AB5(seed=RK4(), seed_steps_per_step=2)
-t0, tf = 0, 1600
+t0, tf = 0, 800
 dt = 1e-2
 
 nf = NeuralFieldSparse(
@@ -75,35 +73,65 @@ sphere_points = points.copy()
 sphere_points /= la.norm(sphere_points, axis=1)[:, np.newaxis]
 
 
+def rotation_matrix(point: np.ndarray[float]) -> np.ndarray[float]:
+    """
+    Get a matrix that rotates the given point to the z-axis.
+    """
+    x, y, z = point / la.norm(point)
+    theta = np.arctan2(y, x)
+    phi = np.arctan2(z, np.sqrt(x**2 + y**2)) - np.pi / 2
+    R1 = np.array(
+        [
+            [np.cos(theta), np.sin(theta), 0],
+            [-np.sin(theta), np.cos(theta), 0],
+            [0, 0, 1],
+        ]
+    )
+    R2 = np.array(
+        [
+            [np.cos(phi), 0, np.sin(phi)],
+            [0, 1, 0],
+            [-np.sin(phi), 0, np.cos(phi)],
+        ]
+    )
+    return R2 @ R1
+
+
+np.random.seed(0)
+spot_centers = np.random.rand(25, 3) * 2 - 1
+spot_centers /= la.norm(spot_centers, axis=1)[:, np.newaxis]
+spot_shifts = np.zeros_like(spot_centers)
+spot_shifts[:, :2] = (np.random.rand(len(spot_centers), 2) - 0.5)
+spot_shifts[:, :2] /= la.norm(spot_shifts[:, :2], axis=1)[:, np.newaxis] / pos_sd
+spot_shifts[:, 2] = 1
+rot_mats = [rotation_matrix(shift) for shift in spot_shifts]
 
 v0 = np.zeros((2, len(points)))
-v0[1] = 1.0
-u_center = [0.5, 0.0]
-q_center = [u_center[0], u_center[1] + pos_sd]
-u_center.append(np.sqrt(1 - u_center[0] ** 2 - u_center[1] ** 2))
-q_center.append(np.sqrt(1 - q_center[0] ** 2 - q_center[1] ** 2))
-v0[0] = gauss(la.norm(sphere_points - u_center, axis=1), pos_sd, normalized=False)
-v0[1] = 1 - gauss(la.norm(sphere_points - q_center, axis=1), pos_sd, normalized=False)
+v0[0] = sum(
+    gauss(la.norm(sphere_points - center, axis=1), pos_sd, normalized=False)
+    for center in spot_centers
+)
+small_rot = rotation_matrix(np.array([0.05, 0, 1.0]))
+v0[1] = 1 - sum(
+    gauss(la.norm(sphere_points - rot_mat @ center, axis=1), pos_sd, normalized=False)
+    for center, rot_mat in zip(spot_centers, rot_mats)
+)
 
+# start sim
 v = v0.copy()
 
 if SAVE_3D_ANIMATION:
     plotter = pv.Plotter(off_screen=True)
-    plotter.open_gif("media/synaptic_depression.gif")
+    plotter.open_gif("media/many_spots.gif")
     # plotter = pv.Plotter(off_screen=False)
     shift_vec_x = np.array([1, 0, 0], dtype=float)
     shift_vec_y = np.array([0, 1, 0], dtype=float)
     shift_amount = 1.3
-    # u_cmap = "jet"
-    u_cmap = "viridis"
+    u_cmap = "jet"
     u_clim = [-1, 1]
     v_cmap = "binary"
     v_clim = [0, 1.5]
-    points_inverted = qf.points.copy()
-    points_inverted[:, 2] *= -1
-    max_index = np.argmax(v[0])
-    my_rot = rotation_matrix(points[max_index])
-    my_points = qf.points @ my_rot.T
+    my_points = qf.points.copy()
     # u plot
     u_mesh = pv.PolyData(
         my_points - shift_amount * shift_vec_x,
@@ -164,29 +192,6 @@ ax.axis("equal")
 plt.pause(1e-5)
 
 time = TimeDomain_Start_Stop_MaxSpacing(t0, tf, dt)
-peak_indices = []
-smooth_peaks = []
-
-
-blur_filter = np.exp(-np.linspace(0, 2, 1001))[::-1]
-blur_filter /= sum(blur_filter)
-
-
-def blur(points):
-    if len(points) < len(blur_filter):
-        ave = sum(points * blur_filter[-len(points) :, np.newaxis]) / sum(
-            blur_filter[-len(points) :]
-        )
-    else:
-        ave = sum(points[-len(blur_filter) :] * blur_filter[:, np.newaxis])
-    return ave
-
-
-# smooth_peaks = [
-#     blur(qf.points[peak_indices][:i]) for i in range(1, len(peak_indices) + 1)
-# ]
-
-
 for index, (t, v) in enumerate(
     tqdm(
         zip(time.array, solver.solution_generator(v, rhs, time)),
@@ -195,8 +200,6 @@ for index, (t, v) in enumerate(
         leave=True,
     )
 ):
-    peak_indices.append(np.argmax(v[0]))
-    smooth_peaks.append(blur(qf.points[peak_indices]))
     if index % 100 == 0:
         scatter_u.set_array(v[0])
         scatter_v.set_array(v[1])
@@ -205,33 +208,7 @@ for index, (t, v) in enumerate(
         if SAVE_3D_ANIMATION:
             u_mesh["scalars"] = v[0]
             v_mesh["scalars"] = v[1]
-            # u_mesh_inverted["scalars"] = v[0]
-            # v_mesh_inverted["scalars"] = v[1]
-            rot_mat = rotation_matrix(smooth_peaks[-1])
-            my_points = qf.points @ rot_mat.T
-            u_mesh.points = my_points - shift_amount * shift_vec_x
-            v_mesh.points = my_points + shift_amount * shift_vec_x
-            # plotter = pv.Plotter()
-            smooth_arr = np.array(smooth_peaks)
-            smooth_arr += 0.05 * smooth_arr / la.norm(smooth_arr, axis=1)[:, np.newaxis]
-            trail_mesh = lines_from_points(
-                smooth_arr @ rot_mat.T + shift_amount * shift_vec_x
-            )
-            plotter.add_mesh(
-                trail_mesh,
-                color="red",
-                name="trail",
-                line_width=5,
-            )
-            # plotter.show()
-            if index % (len(time.array) // 100) == 0 or index == len(time.array) - 1:
-                plotter.screenshot(
-                    f"media/traveling_bump_frames/traveling_bump_anim{index}.png"
-                )
             plotter.write_frame()
 
 if SAVE_3D_ANIMATION:
     plotter.close()
-
-with open("data/bump_path.pickle", "wb") as f:
-    pickle.dump((peak_indices, smooth_peaks), f)
