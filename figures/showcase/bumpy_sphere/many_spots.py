@@ -12,6 +12,10 @@ from odeiter.adams_bashforth import AB5
 from neural_fields.scattered import NeuralFieldSparse
 from neural_fields.firing_rate import HermiteBump
 
+from bumpy_sphere_utils import rotation_matrix
+
+from min_energy_points.sphere import SpherePoints
+
 SAVE_3D_ANIMATION = True
 
 N = 64_000
@@ -47,7 +51,7 @@ synaptic_efficacy_timescale = 20
 synaptic_depletion_rate = 2
 
 solver = AB5(seed=RK4(), seed_steps_per_step=2)
-t0, tf = 0, 800
+t0, tf = 0, 1600
 dt = 1e-2
 
 nf = NeuralFieldSparse(
@@ -73,51 +77,28 @@ sphere_points = points.copy()
 sphere_points /= la.norm(sphere_points, axis=1)[:, np.newaxis]
 
 
-def rotation_matrix(point: np.ndarray[float]) -> np.ndarray[float]:
-    """
-    Get a matrix that rotates the given point to the z-axis.
-    """
-    x, y, z = point / la.norm(point)
-    theta = np.arctan2(y, x)
-    phi = np.arctan2(z, np.sqrt(x**2 + y**2)) - np.pi / 2
-    R1 = np.array(
-        [
-            [np.cos(theta), np.sin(theta), 0],
-            [-np.sin(theta), np.cos(theta), 0],
-            [0, 0, 1],
-        ]
-    )
-    R2 = np.array(
-        [
-            [np.cos(phi), 0, np.sin(phi)],
-            [0, 1, 0],
-            [-np.sin(phi), 0, np.cos(phi)],
-        ]
-    )
-    return R2 @ R1
-
-
+num_bumps = 25
+q_center_dist = pos_sd
 np.random.seed(0)
-spot_centers = np.random.rand(25, 3) * 2 - 1
-spot_centers /= la.norm(spot_centers, axis=1)[:, np.newaxis]
-spot_shifts = np.zeros_like(spot_centers)
-spot_shifts[:, :2] = (np.random.rand(len(spot_centers), 2) - 0.5)
-spot_shifts[:, :2] /= la.norm(spot_shifts[:, :2], axis=1)[:, np.newaxis] / pos_sd
-spot_shifts[:, 2] = 1
-rot_mats = [rotation_matrix(shift) for shift in spot_shifts]
-
 v0 = np.zeros((2, len(points)))
+# v0[1] = 1.0
+u_centers = SpherePoints(num_bumps).points
+q_angles = np.random.random(num_bumps) * 2 * np.pi
+q_centers = [
+    np.array([q_center_dist * np.cos(angle), q_center_dist * np.sin(angle), 1.0])
+    @ rotation_matrix(u_center)
+    for u_center, angle in zip(u_centers, q_angles)
+]
+q_centers = [qc / la.norm(qc) for qc in q_centers]
 v0[0] = sum(
-    gauss(la.norm(sphere_points - center, axis=1), pos_sd, normalized=False)
-    for center in spot_centers
+    gauss(la.norm(sphere_points - u_center, axis=1), pos_sd, normalized=False)
+    for u_center in u_centers
 )
-small_rot = rotation_matrix(np.array([0.05, 0, 1.0]))
 v0[1] = 1 - sum(
-    gauss(la.norm(sphere_points - rot_mat @ center, axis=1), pos_sd, normalized=False)
-    for center, rot_mat in zip(spot_centers, rot_mats)
+    gauss(la.norm(sphere_points - q_center, axis=1), pos_sd, normalized=False)
+    for q_center in q_centers
 )
 
-# start sim
 v = v0.copy()
 
 if SAVE_3D_ANIMATION:
@@ -127,14 +108,12 @@ if SAVE_3D_ANIMATION:
     shift_vec_x = np.array([1, 0, 0], dtype=float)
     shift_vec_y = np.array([0, 1, 0], dtype=float)
     shift_amount = 1.3
-    u_cmap = "jet"
+    u_cmap = "viridis"
     u_clim = [-1, 1]
     v_cmap = "binary"
     v_clim = [0, 1.5]
-    my_points = qf.points.copy()
-    # u plot
     u_mesh = pv.PolyData(
-        my_points - shift_amount * shift_vec_x,
+        qf.points - shift_amount * shift_vec_x,
         [(3, *f) for f in qf.trimesh.simplices],
     )
     u_mesh["scalars"] = v[0]
@@ -149,7 +128,7 @@ if SAVE_3D_ANIMATION:
         show_scalar_bar=False,
     )
     v_mesh = pv.PolyData(
-        my_points + shift_amount * shift_vec_x,
+        qf.points + shift_amount * shift_vec_x,
         [(3, *f) for f in qf.trimesh.simplices],
     )
     v_mesh["scalars"] = v[1]
@@ -208,6 +187,10 @@ for index, (t, v) in enumerate(
         if SAVE_3D_ANIMATION:
             u_mesh["scalars"] = v[0]
             v_mesh["scalars"] = v[1]
+            if index % (len(time.array) // 100) == 0 or index == len(time.array) - 1:
+                plotter.screenshot(
+                    f"media/many_spot_frames/many_spot_anim{index}.png"
+                )
             plotter.write_frame()
 
 if SAVE_3D_ANIMATION:

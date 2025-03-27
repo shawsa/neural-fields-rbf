@@ -146,7 +146,19 @@ ax_flat.text(-0.05, 0.38, "Latitude", rotation=90, transform=ax_flat.transAxes)
 ax_flat.text(0.38, -0.05, "Longitude", transform=ax_flat.transAxes)
 for index in snapshot_indices:
     ax_flat.plot(*tangent_circle(index, smooth_peaks, 10001).T, "w.", markersize=1.0)
+    ax_flat.plot(*tangent_circle(index, smooth_peaks, 11).T, "w.", markersize=10.0)
 ax_flat.plot(*to_lat_long(smooth_peaks).T, "r.", markersize=0.5)
+sub_sample = to_lat_long(smooth_peaks)[::5000]
+ax_flat.scatter(
+    *sub_sample.T,
+    c=np.arange(len(sub_sample)) / len(sub_sample),
+    marker="o",
+    s=15.0,
+    cmap="binary",
+    vmin=-0.1,
+    vmax=1.1,
+    zorder=10,
+)
 for index, label in zip(snapshot_indices, "ABCDEF"):
     ax_flat.plot(*to_lat_long(smooth_peaks[index]), "w*")
     ax_flat.text(

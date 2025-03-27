@@ -17,3 +17,5 @@ Manuscript/manuscript.synctex.gz
 *.pyc
 
 figures/showcase/*/data/*
+figures/showcase/bumpy_sphere/media/traveling_bump_frames/
+figures/showcase/bumpy_sphere/media/many_spot_frames/
