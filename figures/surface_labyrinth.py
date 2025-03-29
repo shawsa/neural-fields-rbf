@@ -35,7 +35,7 @@ im = ax_half.imshow(image[50:-80, 330:690])
 ax_cell = fig.add_subplot(grid[0, 2])
 with open("showcase/blood_cell/media/labyrinth_blood_cell_index0.8.png", "rb") as f:
     image = plt.imread(f)
-im = ax_cell.imshow(image[50:-60, 330:690])
+im = ax_cell.imshow(image[50:-60, 310:720])
 
 ax_sphere.axis("off")
 ax_half.axis("off")

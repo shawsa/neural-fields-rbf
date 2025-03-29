@@ -11,7 +11,9 @@ from odeiter import TimeDomain_Start_Stop_MaxSpacing, RK4
 from odeiter.adams_bashforth import AB5
 
 from neural_fields.scattered import NeuralFieldSparse
-from neural_fields.firing_rate import Sigmoid, Heaviside, HermiteBump
+from neural_fields.firing_rate import HermiteBump
+
+from geodesic import GeodesicCalculator
 
 from blood_cell_utils import unflatten
 
@@ -57,10 +59,33 @@ solver = AB5(seed=RK4(), seed_steps_per_step=2)
 t0, tf = 0, 200
 dt = 1e-2
 
+
+geo = GeodesicCalculator(qf.points)
+
+
+def arc_from_chord(
+    points: np.ndarray[float], point: np.ndarray[float]
+) -> np.ndarray[float]:
+    angles = np.arccos(points @ point)
+    return angles
+
+
+if pointset_index == 0:
+    my_dist = arc_from_chord
+    print("using arclength distance")
+else:
+
+    def my_dist(
+        points: np.ndarray[float], point: np.ndarray[float]
+    ) -> np.ndarray[float]:
+        return geo.dist(point)
+
+
 nf = NeuralFieldSparse(
     qf=qf,
     firing_rate=firing_rate,
     weight_kernel=kernel,
+    dist=my_dist,
     sparcity_tolerance=1e-5,
     verbose=True,
     tqdm_kwargs={"position": 2, "leave": False},
@@ -112,7 +137,12 @@ for index, (t, u) in enumerate(
 # 3D plotting
 plotter = pv.Plotter(off_screen=True)
 # plotter = pv.Plotter(off_screen=False)
-shift = np.array([0, 0, 1-params["amplitude"]**2], dtype=float)
+if params["amplitude"] == 0.8:
+    shift = np.array([0, 0, 0.7], dtype=float)
+elif params["amplitude"] == 0.4:
+    shift = np.array([0, 0, 0.7], dtype=float)
+else:
+    shift = np.array([0, 0, 1.0], dtype=float)
 mesh = pv.PolyData(qf.points + 1.1 * shift, [(3, *f) for f in qf.trimesh.simplices])
 mesh["scalars"] = u
 plotter.add_mesh(
@@ -120,7 +150,7 @@ plotter.add_mesh(
     show_edges=False,
     lighting=True,
     scalars="scalars",
-    cmap="jet",
+    cmap="viridis",
     clim=[-2, 2],
     render=True,
     show_scalar_bar=False,
@@ -136,7 +166,7 @@ plotter.add_mesh(
     show_edges=False,
     lighting=True,
     scalars="scalars",
-    cmap="jet",
+    cmap="viridis",
     clim=[-2, 2],
     render=True,
     show_scalar_bar=False,
@@ -148,7 +178,7 @@ plotter.add_mesh(
     show_edges=False,
     lighting=True,
     scalars=u0,
-    cmap="jet",
+    cmap="viridis",
     clim=[-2, 2],
     render=True,
     show_scalar_bar=False,

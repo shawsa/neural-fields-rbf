@@ -16,6 +16,8 @@ from bumpy_sphere_utils import rotation_matrix
 
 from min_energy_points.sphere import SpherePoints
 
+from geodesic import GeodesicCalculator
+
 SAVE_3D_ANIMATION = True
 
 N = 64_000
@@ -54,10 +56,18 @@ solver = AB5(seed=RK4(), seed_steps_per_step=2)
 t0, tf = 0, 1600
 dt = 1e-2
 
+geo = GeodesicCalculator(qf.points)
+
+
+def my_dist(points: np.ndarray[float], point: np.ndarray[float]) -> np.ndarray[float]:
+    return geo.dist(point)
+
+
 nf = NeuralFieldSparse(
     qf=qf,
     firing_rate=firing_rate,
     weight_kernel=kernel,
+    dist=my_dist,
     sparcity_tolerance=1e-5,
     verbose=True,
     tqdm_kwargs={"position": 0, "leave": True},

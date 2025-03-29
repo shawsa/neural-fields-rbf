@@ -24,8 +24,9 @@ OUTPUT = "media/bumpy_sphere.png"
 DATA = "showcase/bumpy_sphere/data/"
 MEDIA = "showcase/bumpy_sphere/media/"
 
-snapshot_indices = [40000, 99200]
+# snapshot_indices = [40000, 99200]
 # snapshot_indices = [112000]
+snapshot_indices = [25600, 116800]
 
 #############
 #
@@ -140,13 +141,26 @@ for ax_index, snapshot_index in enumerate(snapshot_indices):
 #############
 
 ax_flat = fig.add_subplot(grid[:2, 1])
-ax_flat.pcolormesh(theta, phi, altitudes, cmap="viridis")
+# ax_flat.pcolormesh(theta, phi, altitudes, cmap="viridis")
+ax_flat.pcolormesh(theta, phi, altitudes, cmap="copper")
+gc_color = "white"
+
+# ax_flat.contour(theta, phi, altitudes)
+# gc_color = "black"
+
 ax_flat.axis("off")
 ax_flat.text(-0.05, 0.38, "Latitude", rotation=90, transform=ax_flat.transAxes)
 ax_flat.text(0.38, -0.05, "Longitude", transform=ax_flat.transAxes)
 for index in snapshot_indices:
-    ax_flat.plot(*tangent_circle(index, smooth_peaks, 10001).T, "w.", markersize=1.0)
-    ax_flat.plot(*tangent_circle(index, smooth_peaks, 11).T, "w.", markersize=10.0)
+    ax_flat.plot(
+        *tangent_circle(index, smooth_peaks, 10001).T,
+        ".",
+        color=gc_color,
+        markersize=1.0,
+    )
+    ax_flat.plot(
+        *tangent_circle(index, smooth_peaks, 11).T, ".", color=gc_color, markersize=10.0
+    )
 ax_flat.plot(*to_lat_long(smooth_peaks).T, "r.", markersize=0.5)
 sub_sample = to_lat_long(smooth_peaks)[::5000]
 ax_flat.scatter(
@@ -160,9 +174,11 @@ ax_flat.scatter(
     zorder=10,
 )
 for index, label in zip(snapshot_indices, "ABCDEF"):
-    ax_flat.plot(*to_lat_long(smooth_peaks[index]), "w*")
+    ax_flat.plot(*to_lat_long(smooth_peaks[index]), "*", color=gc_color)
     ax_flat.text(
-        *(to_lat_long(smooth_peaks[index]) + np.r_[0.1, 0.03]), label, color="w"
+        *(to_lat_long(smooth_peaks[index]) + np.r_[0.1, 0.03]),
+        label,
+        color=gc_color,
     )
 
 #############
@@ -202,3 +218,5 @@ plt.show()
 
 # pdfs do not look right with pcolormaps
 plt.savefig("media/bumpy_sphere_traveling_spot.png", dpi=300, bbox_inches="tight")
+# plt.savefig("media/bumpy_sphere_traveling_spot_test.png", dpi=300, bbox_inches="tight")
+# plt.savefig("media/bumpy_sphere_traveling_spot_test2.png", dpi=300, bbox_inches="tight")
