@@ -6,6 +6,7 @@ from tqdm import tqdm
 
 from rbf.geometry import triangle
 from rbf.rbf import RBF
+from rbf.stencil import Stencil
 from rbf.quadrature import QuadStencil, LocalQuadStencil
 from scipy.spatial import KDTree
 
@@ -18,6 +19,91 @@ def rotation_matrix(a: np.ndarray[float], b: np.ndarray[float]) -> np.ndarray[fl
         return np.eye(3)
     R = 2 / np.dot(v, v) * np.outer(v, v) - np.eye(3)
     return R
+
+
+def approximate_normals(
+    points: np.ndarray[float],
+    rbf: RBF,
+    poly_deg: int,
+    stencil_size: int,
+    iterations: int = 1,
+) -> np.ndarray[float]:
+    """Generate approximate normal vectors to points from a surface.
+    Uses local RBF-FD to approximate gradients then derives normal vectors
+    from gradients.
+
+    Normal vectors are not oriented. For use with the RBF-QF algorithm below
+    be sure to orient your normal vectors consistently.
+    """
+    normals = np.empty_like(points)
+    tree = KDTree(points)
+    for index, point in enumerate(points):
+        normals[index] = approximate_normal(
+            points[tree.query(point, k=stencil_size)[1]], rbf, poly_deg, iterations
+        )
+    return orient_normals(points, normals, tree)
+
+
+def orient_normals(
+    points: np.ndarray[float], normals: np.ndarray[float], tree: KDTree
+) -> np.ndarray[float]:
+    normals = normals.copy()
+    indices = tree.query(points[0], k=len(points))[1]
+    oriented = set([0])
+    for index in indices:
+        nbrs = tree.query(points[index], k=12)[1]
+        for nbr in nbrs[1:]:
+            if nbr in oriented:
+                normals[index] *= np.sign(np.dot(normals[index], normals[nbr]))
+                oriented.add(index)
+                break
+    return normals
+
+
+def approximate_normal(
+    points: np.ndarray,
+    rbf: RBF,
+    poly_deg: int,
+    iterations: int,
+) -> np.ndarray[float]:
+    my_points = points - points[0]
+    scale_factor = np.max(la.norm(my_points, axis=1))
+    my_points /= scale_factor
+    normal = la.svd(my_points)[2][2]
+    for _ in range(iterations):
+        normal = improve_approximate_normal(
+            normal, scale_factor, my_points, rbf, poly_deg
+        )
+    return normal
+
+
+def improve_approximate_normal(
+    rough_normal: np.ndarray[float],
+    scale_factor: float,
+    points: np.ndarray[float],
+    rbf: RBF,
+    poly_deg: int,
+) -> np.ndarray[float]:
+    """Given a set of points from a surface, approximate the normal vector
+    at the first point.
+    """
+    u = np.array([0, 0, 1]) - rough_normal
+    u /= la.norm(u)
+    Q = np.eye(3) - 2 * np.outer(u, u)
+    points = points @ Q.T
+    stencil = Stencil(points[:, :2], points[0, :2])
+    mat = stencil.interpolation_matrix(rbf, poly_deg)
+    rs = la.norm(stencil.points, axis=1)
+    n = len(points)
+    rhs = np.zeros((len(mat[0]), 2))
+    rhs[:n] = stencil.points * rbf.dr_div_r(rs)[:, np.newaxis]
+    rhs[n + 1, 0] = 1
+    rhs[n + 2, 1] = 1
+    fd_weights = la.solve(mat, rhs)[:n]
+    dx, dy = (fd_weights.T @ points[:, 2]) * scale_factor
+    normal = Q.T @ np.cross([1, 0, dx], [0, 1, dy])
+    normal /= la.norm(normal)
+    return normal
 
 
 class TriMesh:
@@ -148,7 +234,7 @@ class SurfaceStencil(LocalQuadStencil):
     def rotation_matrix(self) -> np.ndarray[float]:
         return rotation_matrix(self.face.normal, np.array([0, 0, 1]))
 
-    def gnomic_proj(self, points) -> np.ndarray[float]:
+    def projection(self, points) -> np.ndarray[float]:
         normal = self.face.normal
         center = self.face.center - self.face.projection_point
         points = points - self.face.projection_point
@@ -159,11 +245,11 @@ class SurfaceStencil(LocalQuadStencil):
 
     @property
     def planar_points(self) -> np.ndarray[float]:
-        return self.gnomic_proj(self.points)
+        return self.projection(self.points)
 
     @property
     def planar_face_verts(self) -> np.ndarray[float]:
-        return self.gnomic_proj(self.face.verts)
+        return self.projection(self.face.verts)
 
     def flat_weights(self, rbf: RBF, poly_deg: int):
         return QuadStencil(
