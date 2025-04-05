@@ -29,7 +29,6 @@ colors = {deg: color for deg, color in zip(range(10), TABLEAU_COLORS.keys())}
 #
 #############
 
-print("Generating Figure.")
 figsize = (8, 8)
 fig = plt.figure("flat convergence", figsize=figsize)
 
@@ -162,25 +161,39 @@ ax_weights.axis("off")
 with open("torus_convergence/data/torus_weights.pickle", "rb") as f:
     weights = pickle.load(f)
 
+rounded_weights = np.round(weights, 10)
+unique_weights = sorted(list(set(rounded_weights)))
+weight_counts = [
+    sum(1 for w in rounded_weights if w == weight) for weight in unique_weights
+]
+
 ax_hist = fig.add_subplot(grid[1, 1])
-_, bins, patches = ax_hist.hist(weights, bins=25, orientation="horizontal")
 cnorm = Normalize(np.min(weights), np.max(weights))
-for val, patch in zip(bins, patches):
-    patch.set_facecolor(plt.cm.viridis(cnorm(val)))
+for w, c in zip(unique_weights, weight_counts):
+    color = plt.cm.viridis(cnorm(w))
+    ax_hist.plot([0, c], [w, w], "-", color=color, markersize=10, linewidth=0.5)
+    ax_hist.plot([c], [w], ".", color=color, markersize=10, linewidth=0.5)
+
+ax_hist.set_xlabel("counts")
+ax_hist.set_ylabel("weights")
+# _, bins, patches = ax_hist.hist(weights, bins=25, orientation="horizontal")
+# for val, patch in zip(bins, patches):
+#     patch.set_facecolor(plt.cm.viridis(cnorm(val)))
 
 # ax_hist.set_xlabel("Counts")
 # ax_hist.set_ylabel("weight")
-max_weight_marker = np.round(np.max(weights), 4)
-min_weight_marker = np.round(np.min(weights), 4)
-ax_hist.axis("off")
-ax_hist.text(-800, max_weight_marker, f"{max_weight_marker:.4f}")
-ax_hist.text(-800, min_weight_marker, f"{min_weight_marker:.4f}")
-ax_hist.text(-600, (max_weight_marker + min_weight_marker) / 2, "weights", rotation=90)
-ax_hist.text(
-    1500,
-    min_weight_marker - (max_weight_marker - min_weight_marker) * 0.07,
-    "counts",
-)
+# max_weight_marker = np.round(np.max(weights), 4)
+# min_weight_marker = np.round(np.min(weights), 4)
+# max_count = max(weight_counts)
+# ax_hist.axis("off")
+# ax_hist.text(-0.25*max_count, max_weight_marker, f"{max_weight_marker:.4f}")
+# ax_hist.text(-0.25*max_count, min_weight_marker, f"{min_weight_marker:.4f}")
+# ax_hist.text(-0.15*max_count, (max_weight_marker + min_weight_marker) / 2, "weights", rotation=90)
+# ax_hist.text(
+#     max_count/2,
+#     min_weight_marker - (max_weight_marker - min_weight_marker) * 0.07,
+#     "counts",
+# )
 
 
 #############
