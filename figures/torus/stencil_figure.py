@@ -15,7 +15,7 @@ FILE = "../media/partition_and_projection"
 figsize = (8, 3)
 fig = plt.figure("Stencil Projection", figsize=figsize)
 
-grid = gs.GridSpec(1, 2)
+grid = gs.GridSpec(1, 3)
 
 #############
 #
@@ -41,8 +41,22 @@ img_file = "media/projection_stencil.png"
 with open(img_file, "rb") as file:
     projection_image = plt.imread(file)
 
-ax_projection.imshow(projection_image)
+ax_projection.imshow(projection_image[100:-100, 200:-200])
 ax_projection.axis("off")
+
+#############
+#
+# DA sketch
+#
+#############
+
+ax_sketch = fig.add_subplot(grid[0, 2])
+img_file = "media/da_sketch.jpg"
+with open(img_file, "rb") as file:
+    sketch = plt.imread(file)
+
+ax_sketch.imshow(sketch[140:900, 200:1300])
+ax_sketch.axis("off")
 
 #############
 #
@@ -61,6 +75,7 @@ for ax, label in zip(
     [
         ax_partition,
         ax_projection,
+        ax_sketch,
     ],
     "ABCDEFGH",
 ):
