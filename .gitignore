@@ -19,3 +19,5 @@ Manuscript/manuscript.synctex.gz
 figures/showcase/*/data/*
 figures/showcase/bumpy_sphere/media/traveling_bump_frames/
 figures/showcase/bumpy_sphere/media/many_spot_frames/
+!figures/showcase/human_cortex/data/*README.txt
+!figures/showcase/human_cortex/media/cortex_labyrinth_frames/
