@@ -12,10 +12,12 @@ plt.rcParams.update(
 
 FILE = "../media/partition_and_projection"
 
-figsize = (8, 3)
+# figsize = (8, 3)
+figsize = (8, 8)
 fig = plt.figure("Stencil Projection", figsize=figsize)
 
-grid = gs.GridSpec(1, 3)
+# grid = gs.GridSpec(1, 3)
+grid = gs.GridSpec(3, 2)
 
 #############
 #
@@ -50,12 +52,13 @@ ax_projection.axis("off")
 #
 #############
 
-ax_sketch = fig.add_subplot(grid[0, 2])
-img_file = "media/da_sketch.jpg"
+# ax_sketch = fig.add_subplot(grid[0, 2])
+ax_sketch = fig.add_subplot(grid[1:, :])
+img_file = "media/da_sketch.png"
 with open(img_file, "rb") as file:
     sketch = plt.imread(file)
 
-ax_sketch.imshow(sketch[140:900, 200:1300])
+ax_sketch.imshow(sketch[:, :])
 ax_sketch.axis("off")
 
 #############

@@ -17,6 +17,8 @@ plt.rcParams.update(
         "text.usetex": True,
         "mathtext.fontset": "stix",
         "font.family": "STIXGeneral",
+        "axes.spines.right": False,
+        "axes.spines.top": False,
     }
 )
 

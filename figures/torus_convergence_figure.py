@@ -17,6 +17,8 @@ plt.rcParams.update(
         "text.usetex": True,
         "mathtext.fontset": "stix",
         "font.family": "STIXGeneral",
+        "axes.spines.right": False,
+        "axes.spines.top": False,
     }
 )
 
@@ -29,17 +31,23 @@ colors = {deg: color for deg, color in zip(range(10), TABLEAU_COLORS.keys())}
 #
 #############
 
-figsize = (8, 8)
+figsize = (8, 7)
 fig = plt.figure("flat convergence", figsize=figsize)
 
-grid = gs.GridSpec(2, 2)
+num_gs_rows = 12
+num_gs_rows_top = 6
+num_gs_rows_bot = 5
+grid = gs.GridSpec(num_gs_rows, 2)
+top_row = slice(0, num_gs_rows_top)
+bot_row = slice(num_gs_rows - num_gs_rows_bot, num_gs_rows)
+bot_row_small = slice(num_gs_rows - num_gs_rows_bot, num_gs_rows-1)
 
 #############
 #
 # quad convergence
 #
 #############
-ax_quad = fig.add_subplot(grid[0, 0])
+ax_quad = fig.add_subplot(grid[top_row, 0])
 data_file = "torus_convergence/data/torus_quad.json"
 
 with open(data_file, "rb") as f:
@@ -80,7 +88,7 @@ ax_quad.set_xticks(tic_locs, [f"${tick}^{{-1/2}}$" for tick in N_ticks])
 # nf convergence
 #
 #############
-ax_nf = fig.add_subplot(grid[0, 1])
+ax_nf = fig.add_subplot(grid[top_row, 1])
 data_file = "torus_convergence/data/torus_nf.json"
 with open(data_file, "rb") as f:
     results = [SimpleNamespace(**d) for d in json.load(f)]
@@ -145,7 +153,7 @@ ax_nf.set_xticks(tic_locs, [f"${tick}^{{-1/2}}$" for tick in N_ticks])
 #
 #############
 
-ax_weights = fig.add_subplot(grid[1, 0])
+ax_weights = fig.add_subplot(grid[bot_row, 0])
 with open("torus_convergence/media/torus_weights.png", "rb") as f:
     image = plt.imread(f)
 im = ax_weights.imshow(image[200:600, 200:800])
@@ -167,34 +175,15 @@ weight_counts = [
     sum(1 for w in rounded_weights if w == weight) for weight in unique_weights
 ]
 
-ax_hist = fig.add_subplot(grid[1, 1])
+ax_hist = fig.add_subplot(grid[bot_row_small, 1])
 cnorm = Normalize(np.min(weights), np.max(weights))
 for w, c in zip(unique_weights, weight_counts):
     color = plt.cm.viridis(cnorm(w))
-    ax_hist.plot([0, c], [w, w], "-", color=color, markersize=10, linewidth=0.5)
-    ax_hist.plot([c], [w], ".", color=color, markersize=10, linewidth=0.5)
+    ax_hist.plot([w, w], [0, c], "-", color=color, markersize=10, linewidth=0.5)
+    ax_hist.plot([w], [c], ".", color=color, markersize=10, linewidth=0.5)
 
-ax_hist.set_xlabel("counts")
-ax_hist.set_ylabel("weights")
-# _, bins, patches = ax_hist.hist(weights, bins=25, orientation="horizontal")
-# for val, patch in zip(bins, patches):
-#     patch.set_facecolor(plt.cm.viridis(cnorm(val)))
-
-# ax_hist.set_xlabel("Counts")
-# ax_hist.set_ylabel("weight")
-# max_weight_marker = np.round(np.max(weights), 4)
-# min_weight_marker = np.round(np.min(weights), 4)
-# max_count = max(weight_counts)
-# ax_hist.axis("off")
-# ax_hist.text(-0.25*max_count, max_weight_marker, f"{max_weight_marker:.4f}")
-# ax_hist.text(-0.25*max_count, min_weight_marker, f"{min_weight_marker:.4f}")
-# ax_hist.text(-0.15*max_count, (max_weight_marker + min_weight_marker) / 2, "weights", rotation=90)
-# ax_hist.text(
-#     max_count/2,
-#     min_weight_marker - (max_weight_marker - min_weight_marker) * 0.07,
-#     "counts",
-# )
-
+ax_hist.set_xlabel("weights")
+ax_hist.set_ylabel("counts")
 
 #############
 #
