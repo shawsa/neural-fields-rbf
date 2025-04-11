@@ -25,6 +25,21 @@ fig = plt.figure("cortex labyrinth", figsize=figsize)
 snapshot_indices = [i * 1000 for i in range(6)]
 grid = gs.GridSpec(3, len(snapshot_indices))
 
+arrow_ax = fig.add_axes([0, 0, 1, 1], zorder=100)
+arrow_ax.axis("off")
+arrow_width = 0.02
+arrow_height = 0.06
+arrow_ax.plot([0, 1], [0, 0], "k-", zorder=100)
+arrow_ax.plot(
+    [1 - arrow_width, 1, 1 - arrow_width],
+    [-arrow_height, 0, arrow_height],
+    "k-",
+    zorder=100,
+)
+arrow_ax.text(0.47, -0.13, "Time")
+arrow_ax.set_ylim(-2.8, 0.4)
+arrow_ax.set_xlim(-0.1, 1.1)
+
 axes = []
 for ax_index, snapshot_index in zip(range(len(snapshot_indices)), snapshot_indices):
     ax = fig.add_subplot(grid[0, ax_index])
@@ -39,7 +54,7 @@ for ax_index, snapshot_index in zip(range(len(snapshot_indices)), snapshot_indic
     ax.axis("off")
 
 
-for panel_index in [1, 2, 0]:
+for panel_index in range(3):
     with open(MEDIA_DIR + f"panel_{panel_index}.png", "rb") as f:
         image = plt.imread(f)
     ax = fig.add_subplot(grid[1:, 2 * panel_index : 2 * panel_index + 2])
@@ -62,9 +77,7 @@ subplot_label_font = {
     "usetex": True,
 }
 for ax, label in zip(
-    [
-        *axes,
-    ],
+    [axes[0], *axes[-3:]],
     "ABCDEFGHIJKLMNOP",
 ):
     ax.text(
