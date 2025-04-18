@@ -22,7 +22,7 @@ plt.rcParams.update(
     }
 )
 
-FILE = "media/flat_convergence"
+FILE = "media/flat_convergence_compressed"
 colors = {deg: color for deg, color in zip(range(10), TABLEAU_COLORS.keys())}
 
 #############
@@ -31,27 +31,27 @@ colors = {deg: color for deg, color in zip(range(10), TABLEAU_COLORS.keys())}
 #
 #############
 
-width = 2 * np.pi
-t0, tf = 0, 2 * np.pi
+# width = 2 * np.pi
+# t0, tf = 0, 2 * np.pi
 
-threshold = 0.5
-gain = 5
-weight_kernel_sd = 0.025
-sol_sd = 1.1
-path_radius = 0.2
-epsilon = 0.1
+# threshold = 0.5
+# gain = 5
+# weight_kernel_sd = 0.025
+# sol_sd = 1.1
+# path_radius = 0.2
+# epsilon = 0.1
 
-sol = ManufacturedSolutionPeriodic(
-    weight_kernel_sd=weight_kernel_sd,
-    threshold=threshold,
-    gain=gain,
-    solution_sd=sol_sd,
-    path_radius=path_radius,
-    epsilon=epsilon,
-    period=width,
-)
+# sol = ManufacturedSolutionPeriodic(
+#     weight_kernel_sd=weight_kernel_sd,
+#     threshold=threshold,
+#     gain=gain,
+#     solution_sd=sol_sd,
+#     path_radius=path_radius,
+#     epsilon=epsilon,
+#     period=width,
+# )
 
-X, Y = np.meshgrid(*2 * (np.linspace(-np.pi, np.pi, 401),))
+# X, Y = np.meshgrid(*2 * (np.linspace(-np.pi, np.pi, 401),))
 
 #############
 #
@@ -60,10 +60,12 @@ X, Y = np.meshgrid(*2 * (np.linspace(-np.pi, np.pi, 401),))
 #############
 
 print("Generating Figure.")
-figsize = (8, 8)
+# figsize = (8, 8)
+figsize = (8, 4)
 fig = plt.figure("flat convergence", figsize=figsize)
 
-grid = gs.GridSpec(2, 2)
+# grid = gs.GridSpec(2, 2)
+grid = gs.GridSpec(1, 2)
 
 #############
 #
@@ -147,36 +149,36 @@ ax_nf.set_xticks(x_ticks, [str(tick) for tick in x_ticks])
 #
 #############
 
-ax_hex = fig.add_subplot(grid[1, 0])
-data_file = "flat_convergence/data/flat_quad_hex_convergence.json"
-with open(data_file, "rb") as f:
-    results = [SimpleNamespace(**d) for d in json.load(f)]
+# ax_hex = fig.add_subplot(grid[1, 0])
+# data_file = "flat_convergence/data/flat_quad_hex_convergence.json"
+# with open(data_file, "rb") as f:
+#     results = [SimpleNamespace(**d) for d in json.load(f)]
 
-poly_degs = list(set([result.poly_deg for result in results]))
+# poly_degs = list(set([result.poly_deg for result in results]))
 
-for poly_deg in poly_degs:
-    color = colors[poly_deg]
-    my_res = [result for result in results if result.poly_deg == poly_deg]
-    ns = [result.N for result in my_res]
-    hs = [res.h for res in my_res]
-    errs = [result.error for result in my_res]
-    fit = linregress(np.log(hs), np.log(errs))
-    ax_hex.loglog(hs, errs, ".", color=color)
-    ax_hex.loglog(
-        hs,
-        [np.exp(fit.intercept + np.log(h) * fit.slope) for h in hs],
-        "-",
-        color=color,
-        label=f"deg{poly_deg}~$\\mathcal{{O}}({fit.slope:.2f})$",
-    )
-ax_hex.legend()
-ax_hex.set_title("Quadrature on Regular Meshes")
-ax_hex.set_ylabel("Relative Error")
-ax_hex.set_xlabel("$h$")
-ax_hex.xaxis.set_major_formatter(ScalarFormatter())
-ax_hex.minorticks_off()
-x_ticks = [0.006, 0.008, 0.01]
-ax_hex.set_xticks(x_ticks, [str(tick) for tick in x_ticks])
+# for poly_deg in poly_degs:
+#     color = colors[poly_deg]
+#     my_res = [result for result in results if result.poly_deg == poly_deg]
+#     ns = [result.N for result in my_res]
+#     hs = [res.h for res in my_res]
+#     errs = [result.error for result in my_res]
+#     fit = linregress(np.log(hs), np.log(errs))
+#     ax_hex.loglog(hs, errs, ".", color=color)
+#     ax_hex.loglog(
+#         hs,
+#         [np.exp(fit.intercept + np.log(h) * fit.slope) for h in hs],
+#         "-",
+#         color=color,
+#         label=f"deg{poly_deg}~$\\mathcal{{O}}({fit.slope:.2f})$",
+#     )
+# ax_hex.legend()
+# ax_hex.set_title("Quadrature on Regular Meshes")
+# ax_hex.set_ylabel("Relative Error")
+# ax_hex.set_xlabel("$h$")
+# ax_hex.xaxis.set_major_formatter(ScalarFormatter())
+# ax_hex.minorticks_off()
+# x_ticks = [0.006, 0.008, 0.01]
+# ax_hex.set_xticks(x_ticks, [str(tick) for tick in x_ticks])
 
 #############
 #
@@ -209,12 +211,12 @@ ax_hex.set_xticks(x_ticks, [str(tick) for tick in x_ticks])
 #
 #############
 
-ax_sol = fig.add_subplot(grid[1, 1])
-ax_sol.pcolormesh(X, Y, sol.exact(X, Y, tf), cmap="viridis")
-my_ts = np.linspace(0, 2*np.pi, 201)
-ax_sol.plot(path_radius*np.cos(my_ts), path_radius*np.sin(my_ts), "w-")
-ax_sol.set_title("Neural Field Solution")
-ax_sol.axis("off")
+# ax_sol = fig.add_subplot(grid[1, 1])
+# ax_sol.pcolormesh(X, Y, sol.exact(X, Y, tf), cmap="viridis")
+# my_ts = np.linspace(0, 2*np.pi, 201)
+# ax_sol.plot(path_radius*np.cos(my_ts), path_radius*np.sin(my_ts), "w-")
+# ax_sol.set_title("Neural Field Solution")
+# ax_sol.axis("off")
 
 
 #############
@@ -235,8 +237,8 @@ for ax, label in zip(
         ax_quad,
         ax_nf,
         # ax_func,
-        ax_hex,
-        ax_sol,
+        # ax_hex,
+        # ax_sol,
     ],
     "ABCDEFGH",
 ):
@@ -248,7 +250,7 @@ for ax, label in zip(
         **subplot_label_font,
     )
 
-plt.suptitle("RBF-QF on the Unit Square")
+# plt.suptitle("RBF-QF on the Unit Square")
 
 grid.tight_layout(fig)
 plt.show()
