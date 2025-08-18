@@ -72,12 +72,12 @@ print(f"max_error={np.max(np.abs(err_hex)):.3E}")
 #############
 
 print("Generating Figure.")
-# figsize = (8, 10)
-figsize = (8, 6)
+figsize = (8, 10)
+# figsize = (8, 6)
 fig = plt.figure("quad_space_error", figsize=figsize)
 
-# grid = gs.GridSpec(23, 24)
-grid = gs.GridSpec(15, 24)
+grid = gs.GridSpec(23, 24)
+# grid = gs.GridSpec(15, 24)
 
 lcol = slice(0, 8)
 lbar = slice(8, 9)
@@ -190,38 +190,38 @@ ax_rand_log_space.text(*x_label_loc, "$x_0$", transform=ax_rand_log_space.transA
 ax_rand_log_space.text(*y_label_loc, "$y_0$", transform=ax_rand_log_space.transAxes)
 
 # hex error
-# ax_hex_space = fig.add_subplot(grid[row3, lcol])
-# error_plot = ax_hex_space.pcolormesh(X, Y, err_hex, cmap="viridis")
-# ax_hex_space.triplot(*hex_points.T, qf_hex.mesh.simplices, linewidth=0.2)
-# ax_hex_space.plot(*hex_points.T, "k.", markersize=0.5)
-# ax_hex_space.set_xlim(0, 1)
-# ax_hex_space.set_ylim(0, 1)
+ax_hex_space = fig.add_subplot(grid[row3, lcol])
+error_plot = ax_hex_space.pcolormesh(X, Y, err_hex, cmap="viridis")
+ax_hex_space.triplot(*hex_points.T, qf_hex.mesh.simplices, linewidth=0.2)
+ax_hex_space.plot(*hex_points.T, "k.", markersize=0.5)
+ax_hex_space.set_xlim(0, 1)
+ax_hex_space.set_ylim(0, 1)
 
-# ax_hex_space_bar = fig.add_subplot(grid[row3, lbar])
-# error_color = plt.colorbar(error_plot, cax=ax_hex_space_bar)
-# ax_hex_space.axis("equal")
-# ax_hex_space.axis("off")
-# ax_hex_space.set_title("Relative Error")
+ax_hex_space_bar = fig.add_subplot(grid[row3, lbar])
+error_color = plt.colorbar(error_plot, cax=ax_hex_space_bar)
+ax_hex_space.axis("equal")
+ax_hex_space.axis("off")
+ax_hex_space.set_title("Relative Error")
 
-# ax_hex_space.text(*x_label_loc, "$x_0$", transform=ax_hex_space.transAxes)
-# ax_hex_space.text(*y_label_loc, "$y_0$", transform=ax_hex_space.transAxes)
+ax_hex_space.text(*x_label_loc, "$x_0$", transform=ax_hex_space.transAxes)
+ax_hex_space.text(*y_label_loc, "$y_0$", transform=ax_hex_space.transAxes)
 
 # log hex error
-# ax_hex_log_space = fig.add_subplot(grid[row3, rcol])
-# log_error_plot = ax_hex_log_space.pcolormesh(
-#     X, Y, np.log10(np.abs(err_hex)), cmap="viridis"
-# )
-# ax_hex_log_space.set_xlim(0, 1)
-# ax_hex_log_space.set_ylim(0, 1)
+ax_hex_log_space = fig.add_subplot(grid[row3, rcol])
+log_error_plot = ax_hex_log_space.pcolormesh(
+    X, Y, np.log10(np.abs(err_hex)), cmap="viridis"
+)
+ax_hex_log_space.set_xlim(0, 1)
+ax_hex_log_space.set_ylim(0, 1)
 
-# ax_hex_log_space_bar = fig.add_subplot(grid[row3, rbar])
-# log_error_color = plt.colorbar(log_error_plot, cax=ax_hex_log_space_bar)
-# ax_hex_log_space.axis("equal")
-# ax_hex_log_space.axis("off")
-# ax_hex_log_space.set_title("Log10 Relative Error")
+ax_hex_log_space_bar = fig.add_subplot(grid[row3, rbar])
+log_error_color = plt.colorbar(log_error_plot, cax=ax_hex_log_space_bar)
+ax_hex_log_space.axis("equal")
+ax_hex_log_space.axis("off")
+ax_hex_log_space.set_title("Log10 Relative Error")
 
-# ax_hex_log_space.text(*y_label_loc, "$y_0$", transform=ax_hex_log_space.transAxes)
-# ax_hex_log_space.text(*x_label_loc, "$x_0$", transform=ax_hex_log_space.transAxes)
+ax_hex_log_space.text(*y_label_loc, "$y_0$", transform=ax_hex_log_space.transAxes)
+ax_hex_log_space.text(*x_label_loc, "$x_0$", transform=ax_hex_log_space.transAxes)
 
 
 # Panel labels
@@ -239,8 +239,8 @@ for ax, label in zip(
         ax_weights,
         ax_rand_space,
         ax_rand_log_space,
-        # ax_hex_space,
-        # ax_hex_log_space,
+        ax_hex_space,
+        ax_hex_log_space,
     ],
     "ABCDEFGH",
 ):

@@ -154,6 +154,22 @@ class TriMesh:
     def is_valid(self):
         return all(len(self.neighbors(i)) == 3 for i in range(len(self.simplices)))
 
+    def find_closest_by_hops(self, face_index, min_count):
+        closest = set(self.simplices[face_index])
+        leaves = set(self.simplices[face_index])
+        while len(closest) < min_count:
+            leaves = set(
+                [
+                    vert
+                    for leaf in leaves
+                    for fid in self.vertex_map[leaf]
+                    for vert in self.simplices[fid]
+                    if vert not in closest
+                ]
+            )
+            closest = closest.union(leaves)
+        return np.array(list(closest), dtype=int)
+
 
 class Face:
     def __init__(self, index: int, trimesh: TriMesh, normal_orientaion=None):
@@ -291,6 +307,7 @@ class SurfaceQuad:
         rbf: RBF,
         poly_deg: int,
         stencil_size: int,
+        hops_instead_of_distance: bool = False,
         verbose=False,
         tqdm_kwargs={},
     ):
@@ -298,6 +315,7 @@ class SurfaceQuad:
         self.rbf = rbf
         self.poly_deg = poly_deg
         self.stencil_size = stencil_size
+        self.hops_instead_of_distance = hops_instead_of_distance
         self.verbose = verbose
         self.tqdm_kwargs = tqdm_kwargs
 
@@ -322,7 +340,12 @@ class SurfaceQuad:
                 return gen
 
         for face in wrapper(self.trimesh.faces):
-            _, neighbor_indices = self.kdt.query(face.center, self.stencil_size)
+            if self.hops_instead_of_distance:
+                neighbor_indices = self.trimesh.find_closest_by_hops(
+                    face.index, self.stencil_size
+                )
+            else:
+                _, neighbor_indices = self.kdt.query(face.center, self.stencil_size)
             stencil = SurfaceStencil(
                 face,
                 self.trimesh.points[neighbor_indices],

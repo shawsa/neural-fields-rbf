@@ -19,7 +19,7 @@ u_mesh = pv.PolyData(
     qf.points,
     [(3, *f) for f in qf.trimesh.simplices],
 )
-u_mesh["scalars"] = sol
+u_mesh["scalars"] = qf.weights
 plotter.add_mesh(
     u_mesh,
     show_edges=False,

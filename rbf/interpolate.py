@@ -157,3 +157,59 @@ def interpolate(
     points: np.ndarray, fs: np.ndarray, rbf: RBF = PHS(3), poly_deg: int = 2
 ):
     return Interpolator(stencil=Stencil(points), fs=fs, rbf=rbf, poly_deg=poly_deg)
+
+
+def _rotation_matrix(a: np.ndarray[float], b: np.ndarray[float]) -> np.ndarray[float]:
+    """Create a matrix that rotates the vector a to the vector b."""
+    v = a / la.norm(a) + b / la.norm(b)
+    d = np.dot(v, v)
+    if d < 1e-14:
+        return np.eye(3)
+    R = 2 / np.dot(v, v) * np.outer(v, v) - np.eye(3)
+    return R
+
+
+class SurfaceInterpolator:
+    def __init__(
+        self,
+        points: np.ndarray[float],
+        normals: np.ndarray[float],
+        fs: np.ndarray[float],
+        rbf: RBF,
+        poly_deg: int,
+        stencil_size: int,
+        kdt: KDTree = None,
+    ):
+        self.points = points
+        self.normals = normals
+        self.fs = fs
+        self.rbf = rbf
+        self.poly_deg = poly_deg
+        self.stencil_size = stencil_size
+        if kdt is None:
+            self.tree = KDTree(points)
+        else:
+            self.tree = kdt
+
+    def _interpolate_single(self, z: np.ndarray[float]):
+        _, index = self.tree.query(z, k=1)
+        _, neighbor_indices = self.tree.query(self.points[index], self.stencil_size)
+        R = _rotation_matrix(self.normals[index], np.r_[0.0, 0.0, 1.0])[:2]
+        planar_points = self.points[neighbor_indices] @ R.T
+        planar_eval = R @ z
+        interpolator = Interpolator(
+            stencil=Stencil(planar_points, planar_points[0]),
+            fs=self.fs[neighbor_indices],
+            rbf=self.rbf,
+            poly_deg=self.poly_deg,
+        )
+        return interpolator.point_eval(planar_eval)
+
+    def interpolate(self, eval_points: np.ndarray[float]) -> np.ndarray[float]:
+        ret = np.zeros(len(eval_points))
+        for index, z in enumerate(eval_points):
+            ret[index] = self._interpolate_single(z)
+        return ret
+
+    def __call__(self, eval_points: np.ndarray[float]) -> np.ndarray[float]:
+        return self.interpolate(eval_points)
