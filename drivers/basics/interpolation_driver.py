@@ -7,9 +7,9 @@ import numpy as np
 from scipy.special import roots_chebyt as cheb
 from tqdm import tqdm
 
-from rbf.rbf import PHS
-from rbf.points import UnitSquare
-from rbf.interpolate import LocalInterpolator
+from neural_fields_rbf.rbf import PHS
+from neural_fields_rbf.rbf.interpolate import LocalInterpolator
+from neural_fields_rbf.points import UnitSquare
 
 
 ########################

@@ -1,11 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from rbf.geometry import triangle
-from rbf.points import UnitSquare
-from rbf.quadrature import QuadStencil
-from rbf.rbf import PHS
 from scipy.spatial import Delaunay
 import sympy as sym
+
+from neural_fields_rbf.rbf.geometry import triangle
+from neural_fields_rbf.points import UnitSquare
+from neural_fields_rbf.rbf.quadrature import QuadStencil
+from neural_fields_rbf.rbf import PHS
 
 n = 7
 points = UnitSquare(n**2, verbose=True).points
@@ -40,15 +41,15 @@ print(total @ ys**2 - 1 / 3)
 x, y = sym.symbols("x y")
 
 for foo_sym in [
-        1,
-        x,
-        y,
-        x**2,
-        x*y,
-        y**2,
-        sym.sin(x) * sym.sin(y),
-        sym.cos(x) * sym.cos(y),
-        sym.cos(x)**2 - y*sym.exp(y),
+    1,
+    x,
+    y,
+    x**2,
+    x * y,
+    y**2,
+    sym.sin(x) * sym.sin(y),
+    sym.cos(x) * sym.cos(y),
+    sym.cos(x) ** 2 - y * sym.exp(y),
 ]:
     if foo_sym == 1:
         exact = 1

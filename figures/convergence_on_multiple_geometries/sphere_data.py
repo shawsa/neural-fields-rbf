@@ -16,6 +16,15 @@ from types import SimpleNamespace
 from rbf.rbf import PHS
 from rbf.surface import TriMesh, SurfaceQuad
 
+plt.rcParams.update(
+    {
+        "font.size": 12,
+        "text.usetex": True,
+        "mathtext.fontset": "stix",
+        "font.family": "STIXGeneral",
+    }
+)
+
 SPHERE_BEST_QUAD_FILE = "data/sphere_best_quad.pickle"
 SPHERE_CONVERGENCE_DATA_FILE = "data/sphere_convergence.json"
 
@@ -217,6 +226,19 @@ for ax, func in zip(axes, funcs):
     ax.set_xlabel("${N}^{-1/2}$")
     # ax.set_xlabel("$h$")
 
+
+mesh = sphere_base()
+my_points = mesh.points
+mesh = sphere_refine(mesh, 2)
+
+plotter = pv.Plotter(off_screen=True)
+plotter.add_mesh(
+    mesh,
+    show_edges=True,
+)
+plotter.screenshot("media/icosahedral_nodes.png")
+
+
 if False:
     mesh = sphere_base()
     while len(mesh.points) < len(quad.weights):
@@ -231,19 +253,3 @@ if False:
     )
     plotter.show()
 
-    mesh = sphere_base()
-    my_points = mesh.points
-    mesh = sphere_refine(mesh, 2)
-
-    plotter = pv.Plotter()
-    plotter.add_points(
-        my_points,
-        color="green",
-        point_size=20,
-        render_points_as_spheres=True,
-    )
-    plotter.add_mesh(
-        mesh,
-        show_edges=True,
-    )
-    plotter.show()

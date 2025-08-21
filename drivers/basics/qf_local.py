@@ -1,12 +1,12 @@
 from math import ceil, sqrt
 import matplotlib.pyplot as plt
 import numpy as np
-from rbf.points import UnitSquare
-from rbf.quadrature import LocalQuad
-from rbf.rbf import PHS
+from neural_fields_rbf.points import UnitSquare
+from neural_fields_rbf.rbf.quadrature import LocalQuad
+from neural_fields_rbf.rbf.rbf import PHS
 import sympy as sym
 
-points = UnitSquare(2000, verbose=True).points
+points = UnitSquare(200, verbose=True).points
 # X, Y = np.meshgrid(np.linspace(0, 1, n), np.linspace(0, 1, n))
 # points = np.array([X.ravel(), Y.ravel()]).T
 rbf = PHS(3)
@@ -40,15 +40,15 @@ print(qf.weights @ ys**2 - 1 / 3)
 x, y = sym.symbols("x y")
 
 for foo_sym in [
-        1,
-        x,
-        y,
-        x**2,
-        x*y,
-        y**2,
-        sym.sin(x) * sym.sin(y),
-        sym.cos(x) * sym.cos(y),
-        sym.cos(x)**2 - y*sym.exp(y),
+    1,
+    x,
+    y,
+    x**2,
+    x * y,
+    y**2,
+    sym.sin(x) * sym.sin(y),
+    sym.cos(x) * sym.cos(y),
+    sym.cos(x) ** 2 - y * sym.exp(y),
 ]:
     if foo_sym == 1:
         exact = 1

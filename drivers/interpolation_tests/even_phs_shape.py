@@ -1,12 +1,13 @@
 from collections import namedtuple
 from itertools import product
 import matplotlib.pyplot as plt
-from min_energy_points import UnitSquare
 import numpy as np
-from rbf.interpolate import Interpolator, Stencil
-from rbf.rbf import RBF
 from tqdm import tqdm
 from typing import Union
+
+from neural_fields_rbf.points import UnitSquare
+from neural_fields_rbf.rbf.interpolate import Interpolator, Stencil
+from neural_fields_rbf.rbf.rbf import RBF
 
 
 class PHSEvenShape(RBF):

@@ -52,7 +52,7 @@ test_functions.append(
 
 
 rbf = PHS(3)
-poly_degs = list(range(5))
+poly_degs = list(range(1, 5))
 stencil_size = hex_stencil_min(30)
 print(f"{stencil_size=}")
 # Ns = list(map(int, np.logspace(np.log10(1_000), np.log10(2_000), 3)))
@@ -62,6 +62,7 @@ for _ in (tqdm_obj_status := tqdm([None], position=0, leave=True)):
     for N in (tqdm_N := tqdm(Ns[::-1], position=1, leave=False)):
         tqdm_N.set_description(f"{N=}")
         points = hex_grid(N)
+        N = len(points)
         mesh = Delaunay(points)
         h, _ = delaunay_covering_radius_stats(mesh)
         for poly_deg in (tqdm_poly_deg := tqdm(poly_degs, position=2, leave=False)):
@@ -96,6 +97,7 @@ for _ in (tqdm_obj_status := tqdm([None], position=0, leave=True)):
                         "approx_quad": approx,
                         "error": error,
                         "relative_error": relative_error,
+                        "num_negative": len(quad.weights[quad.weights < 0])
                     }
                 )
 

@@ -6,13 +6,13 @@ from scipy.spatial import Delaunay
 from scipy.stats import linregress
 from tqdm import tqdm
 
-from min_energy_points import UnitSquare
-from rbf.geometry import delaunay_covering_radius_stats
-
-# from rbf.points.utils import poly_stencil_min, hex_stencil_min
-from rbf.points.utils import get_stencil_size
-from rbf.interpolate import LocalInterpolator
-from rbf.rbf import PHS
+# from min_energy_points import UnitSquare
+from neural_fields_rbf.points import UnitSquare
+from neural_fields_rbf.points.utils import get_stencil_size
+# from neural_fields_rbf.points.utils import poly_stencil_min, hex_stencil_min
+from neural_fields_rbf.rbf.geometry import delaunay_covering_radius_stats
+from neural_fields_rbf.rbf.interpolate import LocalInterpolator
+from neural_fields_rbf.rbf.rbf import PHS
 
 
 DIM = 2

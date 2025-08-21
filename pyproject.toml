@@ -1,0 +1,26 @@
+[project]
+name = "neural-fields-rbf"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "sage", email = "sage.b.shaw@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "numpy>=2.3.2",
+    "scipy>=1.16.1",
+    "sympy>=1.14.0",
+    "tqdm>=4.67.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.6,<0.9.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ipython>=9.4.0",
+    "matplotlib>=3.10.5",
+    "pyqt5>=5.15.11",
+]

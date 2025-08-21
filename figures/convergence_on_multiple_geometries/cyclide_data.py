@@ -182,6 +182,23 @@ for ax, func in zip(axes, funcs):
     ax.set_xlabel("${N}^{-1/2}$")
     ax.set_xlabel("$h$")
 
+
+shape = SpiralCyclide(4_000)
+vor = LocalSurfaceVoronoi(
+    shape.points,
+    shape.normals,
+    shape.implicit_surf,
+    max_neighbors=15,
+    verbose=True,
+)
+plotter = pv.Plotter(off_screen=True)
+plotter.add_mesh(
+    pv.PolyData(shape.points, [(3, *f) for f in vor.triangles]),
+    show_edges=True,
+)
+plotter.screenshot("media/cyclide_nodes.png")
+plotter.show()
+
 if False:
     trimesh = TriMesh(shape.points, vor.triangles, normals=shape.normals)
 
