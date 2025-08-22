@@ -36,9 +36,7 @@ class SpherePoints(PointCloud):
         area_per_point = 4 * np.pi / self.N
         cell_radius = np.sqrt(area_per_point / np.pi)
         self.const_kernel = ConstRepulsionKernel(cell_radius)
-        self.repulsion_kernel = GaussianRepulsionKernel(
-            height=1, shape=2*cell_radius
-        )
+        self.repulsion_kernel = GaussianRepulsionKernel(height=1, shape=2 * cell_radius)
 
         if auto_settle:
             self.auto_settle()
@@ -90,13 +88,20 @@ class SpherePoints(PointCloud):
             rate=1, repeat=50, verbose=self.verbose, tqdm_kwargs=self.tqdm_kwargs
         )
 
+    @property
+    def normals(self) -> np.ndarray[float]:
+        return self.all_points
+
+    def implicit_surf(self, points: np.ndarray[float]) -> np.ndarray[float]:
+        return la.norm(points, axis=1) - 1
+
 
 if __name__ == "__main__":
     N = 600
     sphere = SpherePoints(N)
     plt.ion()
     ax = plt.figure().add_subplot(projection="3d")
-    scatter, = ax.plot(*sphere.coords, "k.")
+    (scatter,) = ax.plot(*sphere.coords, "k.")
 
     for _ in tqdm(range(50)):
         sphere.jostle(repeat=1, verbose=False)

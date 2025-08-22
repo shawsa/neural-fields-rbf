@@ -1,14 +1,13 @@
-from collections import defaultdict
 from functools import cache
 import numpy as np
 import numpy.linalg as la
+from scipy.spatial import KDTree
 from tqdm import tqdm
 
-from rbf.geometry import triangle
-from rbf.rbf import RBF
-from rbf.stencil import Stencil
-from rbf.quadrature import QuadStencil, LocalQuadStencil
-from scipy.spatial import KDTree
+from .geometry import triangle
+from .rbf import RBF
+from .stencil import Stencil
+from .quadrature import QuadStencil, LocalQuadStencil
 
 
 def rotation_matrix(a: np.ndarray[float], b: np.ndarray[float]) -> np.ndarray[float]:
