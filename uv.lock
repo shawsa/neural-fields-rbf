@@ -376,11 +376,15 @@ name = "neural-fields-rbf"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "meshlib" },
     { name = "numpy" },
     { name = "scipy" },
     { name = "sympy" },
     { name = "tqdm" },
+]
+
+[package.optional-dependencies]
+geodesic = [
+    { name = "meshlib" },
 ]
 
 [package.dev-dependencies]
@@ -393,12 +397,13 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "meshlib", specifier = ">=3.0.7.226" },
+    { name = "meshlib", marker = "extra == 'geodesic'", specifier = ">=3.0.7.226" },
     { name = "numpy", specifier = ">=2.3.2" },
     { name = "scipy", specifier = ">=1.16.1" },
     { name = "sympy", specifier = ">=1.14.0" },
     { name = "tqdm", specifier = ">=4.67.1" },
 ]
+provides-extras = ["geodesic"]
 
 [package.metadata.requires-dev]
 dev = [
