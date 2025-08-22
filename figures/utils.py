@@ -3,10 +3,11 @@ from math import ceil, floor, sqrt
 import numpy as np
 from numpy.polynomial import Polynomial as nppoly
 import pickle
-from rbf.points import UnitSquare
-from rbf.quadrature import LocalQuad
 import sympy as sym
 from tqdm import tqdm
+
+from neural_fields_rbf.points import UnitSquare
+from neural_fields_rbf.rbf.quadrature import LocalQuad
 
 CART_STENCILS = "data/cartesian_stencil_sizes.pickle"
 with open(CART_STENCILS, "rb") as f:

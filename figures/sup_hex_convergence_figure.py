@@ -9,8 +9,8 @@ import numpy as np
 from scipy.spatial import Delaunay
 from types import SimpleNamespace
 
-from rbf.quadrature import LocalQuad
-from rbf.rbf import PHS
+from neural_fields_rbf.rbf.quadrature import LocalQuad
+from neural_fields_rbf.rbf.rbf import PHS
 from utils import hex_stencil_min, hex_grid
 
 plt.rcParams.update(
@@ -77,7 +77,7 @@ axes = []
 
 ax_nodes = fig.add_subplot(grid[:5, :5])
 ax_nodes.scatter(*quad.points.T, c=quad.weights, s=5, cmap="viridis")
-ax_nodes.scatter(*quad.points[negative_mask].T, c="black", s=10, cmap="viridis")
+ax_nodes.scatter(*quad.points[negative_mask].T, c="black", s=20, cmap="viridis")
 ax_nodes.axis("equal")
 ax_nodes.axis("off")
 
@@ -134,7 +134,7 @@ for func_str in [poly, gauss]:
         ax.loglog(hs, errs, ".-", color=color, label=f"deg={poly_deg}")
         h_bounds = [hs[0], hs[-1]]
         max_err = errs[0]
-        if func_str == poly:
+        if func_str == poly and poly_deg != 4:
             ax.loglog(
                 h_bounds,
                 [
@@ -147,6 +147,8 @@ for func_str in [poly, gauss]:
             )
     if func_str == gauss:
         for poly_deg in poly_degs:
+            if poly_deg == 4:
+                continue
             ax.loglog(
                 [],
                 [],
