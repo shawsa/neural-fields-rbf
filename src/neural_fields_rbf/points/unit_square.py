@@ -1,5 +1,4 @@
 from math import ceil
-import matplotlib.pyplot as plt
 import numpy as np
 from .points import (
     PointCloud,
@@ -162,73 +161,3 @@ class UnitSquare(PointCloud):
         self.settle(
             rate=1, repeat=50, verbose=self.verbose, tqdm_kwargs=self.tqdm_kwargs
         )
-
-
-if __name__ == "__main__":
-    from scipy.spatial import Delaunay
-    from rbf.geometry import circumradius, delaunay_covering_radius_stats, triangle
-    from rbf.points.points import (
-        PointCloud,
-        GaussianRepulsionKernel,
-        ConstRepulsionKernel,
-    )
-
-    plt.ion()
-    N = 10_000
-    unit_square = UnitSquare(N, auto_settle=False, edge_cluster=False)
-    # unit_square.auto_settle(verbose=True)
-
-    plt.figure("Mesh")
-    (scatter,) = plt.plot(*unit_square.inner.T, "k.")
-    plt.plot(*unit_square.boundary.T, "bs")
-    plt.plot(*unit_square.ghost.T, "or")
-    plt.axis("equal")
-
-    # unit_square.jostle(repeat=20, verbose=True)
-    for _ in tqdm(range(50)):
-        unit_square.jostle(repeat=1)
-        scatter.set_data(*unit_square.inner.T)
-        plt.pause(1e-3)
-
-    # unit_square.settle(rate=1, repeat=20, verbose=True)
-    for _ in tqdm(range(25)):
-        unit_square.settle(rate=0.1)
-        scatter.set_data(*unit_square.inner.T)
-        plt.pause(1e-3)
-
-    for _ in tqdm(range(25)):
-        unit_square.settle(rate=1)
-        scatter.set_data(*unit_square.inner.T)
-        plt.pause(1e-3)
-
-    unit_square.edge_cluster()
-    scatter.set_data(*unit_square.inner.T)
-    plt.pause(1e-3)
-
-    points = unit_square.points
-    mesh = Delaunay(points)
-    plt.triplot(*points.T, mesh.simplices)
-    circum_radii = []
-    centroids = []
-    for tri_indices in mesh.simplices:
-        tri_points = mesh.points[tri_indices]
-        centroids.append(triangle(tri_points).centroid)
-        circum_radii.append(circumradius(tri_points))
-    centroids = np.array(centroids)
-    plt.scatter(*centroids.T, c=circum_radii, cmap="jet")
-    plt.colorbar(label="$h$")
-    plt.show()
-
-    if True:
-        print("Covering Stats")
-        print(f"Target: {unit_square.h:.3E}")
-        print(f"min:\t{min(circum_radii):.3E}")
-        print(
-            f"median:\t{np.median(circum_radii):.3E}\t (ave={np.average(circum_radii):.3E})"
-        )
-        print(f"max:\t{max(circum_radii):.3E}")
-        print(f"max/ave = {max(circum_radii)/np.average(circum_radii):.3f}")
-
-    plt.figure("Histogram")
-    plt.hist(circum_radii, bins=20)
-    plt.xlabel("$h$")

@@ -348,6 +348,21 @@ wheels = [
 ]
 
 [[package]]
+name = "meshlib"
+version = "3.0.7.226"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/aa/1c/780b0b4d3f67217caac3e31c31d38ca30f760f884e629a4510a3199804a8/meshlib-3.0.7.226-py38.py39.py310.py311.py312.py313-none-macosx_12_0_arm64.whl", hash = "sha256:0dd5659bcd5e9bd19ac4ce3c6570f06ae28bde95b8966663705c3b9345e7cd43", size = 81502536, upload-time = "2025-08-12T21:16:37.102Z" },
+    { url = "https://files.pythonhosted.org/packages/3a/cc/32aed1990c032e5575afa640186cc8f06e4b5c260200f44636987f433fe6/meshlib-3.0.7.226-py38.py39.py310.py311.py312.py313-none-manylinux_2_28_aarch64.whl", hash = "sha256:3adf6d648b0d59a4019771a9ffdabe433c6795b45bed098be0539de5db7e4df2", size = 67580221, upload-time = "2025-08-12T21:16:41.528Z" },
+    { url = "https://files.pythonhosted.org/packages/1b/aa/8b2224940d3b99ce79f8c845c16fbb5fb3eb2a43729f75b80dfb38930aa4/meshlib-3.0.7.226-py38.py39.py310.py311.py312.py313-none-manylinux_2_28_x86_64.whl", hash = "sha256:ae0251445d053ebb833967e49103d544ebeaeacd51e33c71a8f4f0b5e19c4f6d", size = 69534764, upload-time = "2025-08-12T21:16:45.545Z" },
+    { url = "https://files.pythonhosted.org/packages/c0/b4/970e8c8a9efb02c5de829139a41a60b1e45fade15d4b9758770d1f74c8d3/meshlib-3.0.7.226-py38.py39.py310.py311.py312.py313-none-win_amd64.whl", hash = "sha256:2d6925dc46b142d9d933be7f48487b938f85a61a389e4c980604094f4375f12f", size = 51177595, upload-time = "2025-08-12T21:16:49.193Z" },
+    { url = "https://files.pythonhosted.org/packages/9a/83/f85d1b6df33751d41e92bb67215adc8e8daf25c6e1f279fab44e4b5195c3/meshlib-3.0.7.226-py39.py310.py311.py312.py313-none-macosx_13_0_x86_64.whl", hash = "sha256:92421e0c84ffe5817e7f5b1dd4cce7d1c2f82cd5b16c1f1718fe833d1bab71d0", size = 85306898, upload-time = "2025-08-12T21:16:53.101Z" },
+]
+
+[[package]]
 name = "mpmath"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -361,10 +376,8 @@ name = "neural-fields-rbf"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "matplotlib" },
+    { name = "meshlib" },
     { name = "numpy" },
-    { name = "pyqt5" },
-    { name = "pyvista" },
     { name = "scipy" },
     { name = "sympy" },
     { name = "tqdm" },
@@ -375,14 +388,13 @@ dev = [
     { name = "ipython" },
     { name = "matplotlib" },
     { name = "pyqt5" },
+    { name = "pyvista" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "matplotlib", specifier = ">=3.10.5" },
+    { name = "meshlib", specifier = ">=3.0.7.226" },
     { name = "numpy", specifier = ">=2.3.2" },
-    { name = "pyqt5", specifier = ">=5.15.11" },
-    { name = "pyvista", specifier = ">=0.46.2" },
     { name = "scipy", specifier = ">=1.16.1" },
     { name = "sympy", specifier = ">=1.14.0" },
     { name = "tqdm", specifier = ">=4.67.1" },
@@ -393,6 +405,7 @@ dev = [
     { name = "ipython", specifier = ">=9.4.0" },
     { name = "matplotlib", specifier = ">=3.10.5" },
     { name = "pyqt5", specifier = ">=5.15.11" },
+    { name = "pyvista", specifier = ">=0.46.2" },
 ]
 
 [[package]]

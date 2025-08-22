@@ -8,10 +8,8 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "matplotlib>=3.10.5",
+    "meshlib>=3.0.7.226",
     "numpy>=2.3.2",
-    "pyqt5>=5.15.11",
-    "pyvista>=0.46.2",
     "scipy>=1.16.1",
     "sympy>=1.14.0",
     "tqdm>=4.67.1",
@@ -26,4 +24,5 @@ dev = [
     "ipython>=9.4.0",
     "matplotlib>=3.10.5",
     "pyqt5>=5.15.11",
+    "pyvista>=0.46.2",
 ]

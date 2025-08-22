@@ -2,7 +2,6 @@
 A simple module for placing points on a sphere.
 """
 
-import matplotlib.pyplot as plt
 import numpy as np
 import numpy.linalg as la
 from tqdm import tqdm
@@ -94,21 +93,3 @@ class SpherePoints(PointCloud):
 
     def implicit_surf(self, points: np.ndarray[float]) -> np.ndarray[float]:
         return la.norm(points, axis=1) - 1
-
-
-if __name__ == "__main__":
-    N = 600
-    sphere = SpherePoints(N)
-    plt.ion()
-    ax = plt.figure().add_subplot(projection="3d")
-    (scatter,) = ax.plot(*sphere.coords, "k.")
-
-    for _ in tqdm(range(50)):
-        sphere.jostle(repeat=1, verbose=False)
-        scatter.set_data_3d(*sphere.coords)
-        plt.pause(0.1)
-
-    for _ in tqdm(range(100)):
-        sphere.settle(rate=1, repeat=1, verbose=False)
-        scatter.set_data_3d(*sphere.coords)
-        plt.pause(0.1)
